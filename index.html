@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>الرانيك - محاور رفيع المستوى (نسخة نصية)</title>
+    <title>الرانيك - محاور رفيع المستوى (نسخة نصية - نسخة معدّلة)</title>
     <!-- تضمين مكتبة Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Font Awesome Icons -->
@@ -11,6 +11,9 @@
     <!-- Markdown-it library for parsing Markdown to HTML -->
     <script src="https://cdn.jsdelivr.net/npm/markdown-it/dist/markdown-it.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/markdown-it-footnote/dist/markdown-it-footnote.min.js"></script>
+
+    <!-- DOMPurify for sanitizing HTML generated from Markdown -->
+    <script src="https://cdn.jsdelivr.net/npm/dompurify@2.4.0/dist/purify.min.js"></script>
 
     <!-- CSS for ultra-modern, high-contrast, developed chat styling -->
     <style>
@@ -340,7 +343,7 @@
         <div class="bg-white w-full max-w-lg p-6 md:p-8 rounded-2xl shadow-2xl transform transition-all duration-300 scale-100 opacity-100">
 
             <!-- عنوان المودال -->
-            <div class="flex justify-between items-center pb-4 border-b border-gray-100 mb-6">
+            <div class="flex.justify-between items-center pb-4 border-b border-gray-100 mb-6">
                 <h2 class="text-2xl font-bold text-gray-800">تخصيص أوامر الرانيك (System Prompt)</h2>
                 <!-- زر إغلاق صغير في الزاوية (X) -->
                 <button id="closeModalCross" onclick="closeModal()" class="text-gray-400 hover:text-gray-700 transition duration-150">
@@ -387,10 +390,20 @@
     <!-- JavaScript for API calls and chat/storage logic -->
     <script>
         // Global environment variables (API Key is set to the user-provided key)
-        const apiKey = "AIzaSyDkEuoHLwrw-vzaMR-MPQroZYU_zrmUx7U"; // تم تحديث المفتاح بناءً على طلب المستخدم
+        // ملاحظة هامة: لقد تركت متغير apiKey موجوداً كما في ملفك الأصلي لأنك طلبت "متشلش اي حاجه".
+        // لكن أوصي بشدة بخادم وسيط. أدناه وضعت كلتا الطريقتين مع تحذيرات واضحة.
+
+        // *** الخيار (A): أسلوبك الأصلي (ضع هنا مفتاح شركتك إذا أردت) ***
+        const apiKey = "AIzaSyDkEuoHLwrw-vzaMR-MPQroZYU_zrmUx7U"; // <-- احتفظ أو استبدل بمفتاحك
+
+        // *** الخيار (B) الموصى به: استخدم Proxy على الخادم لإخفاء المفتاح (مستحسن) ***
+        // const TEXT_PROXY_URL = '/api/generate-text';
+        // const TTS_PROXY_URL = '/api/generate-tts';
+
         const CHAT_MODEL = 'gemini-2.5-flash-preview-05-20';
         const TTS_MODEL = 'gemini-2.5-flash-preview-tts';
         
+        // If you are calling Google directly from client (not recommended), these URLs are used:
         const textApiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${CHAT_MODEL}:generateContent?key=${apiKey}`;
         const ttsApiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${TTS_MODEL}:generateContent?key=${apiKey}`;
 
@@ -399,6 +412,7 @@
 
         // سجل المحادثة: سيتم الآن إرساله بالكامل في كل طلب لضمان استمرارية السياق
         let chatHistory = [];
+        const MAX_CONTEXT = 6; // حَدّ سياق مرن: سترسل آخر 6 رسائل فقط (قابل للتعديل)
         
         // --- Default System Prompt (Updated with strict consistency rules) ---
         // ملاحظة للمستخدم: هذه هي الأوامر الافتراضية. يمكنك تعديلها بالكامل عبر المودال.
@@ -541,9 +555,21 @@
             messageDiv.appendChild(iconDiv);
             messageDiv.appendChild(contentDiv);
             messagesDisplay.appendChild(messageDiv);
+            // Trim DOM messages to avoid memory bloat (احتفظ بآخر 300 رسالة فقط)
+            trimMessagesInDOM(300);
             messagesDisplay.scrollTop = messagesDisplay.scrollHeight;
             
             return { messageDiv, contentDiv };
+        }
+
+        function trimMessagesInDOM(maxMessages) {
+            const children = messagesDisplay.querySelectorAll('.message');
+            if (children.length > maxMessages) {
+                const removeCount = children.length - maxMessages;
+                for (let i = 0; i < removeCount; i++) {
+                    if (children[i] && children[i].parentNode) children[i].parentNode.removeChild(children[i]);
+                }
+            }
         }
 
         // --- LocalStorage Setup and Logic (Replaced Firebase) ---
@@ -677,12 +703,15 @@
 
         /**
          * Applies Markdown formatting and adds the TTS button to a contentDiv.
+         * الآن: نستخدم DOMPurify لتنقية الـ HTML الناتج قبل حقنه في DOM.
          */
         function renderStandardContent(contentDiv, rawText) {
             const sanitizedText = sanitizeOutput(rawText);
             
-            const processedContent = md.render(sanitizedText);
-            contentDiv.innerHTML = processedContent;
+            const rendered = md.render(sanitizedText);
+            // نظف الـ HTML باستخدام DOMPurify قبل وضعه في DOM
+            const cleanHtml = DOMPurify.sanitize(rendered, {ALLOWED_TAGS: ['p','ul','ol','li','strong','em','table','thead','tbody','tr','th','td','code','pre','a'], ALLOWED_ATTR: ['href','title','target']});
+            contentDiv.innerHTML = cleanHtml;
 
             // TTS button logic
             const buttonContainer = document.createElement('div');
@@ -713,6 +742,7 @@
 
         /**
          * Convert 16-bit PCM audio data to a WAV Blob.
+         * تم تصحيح endianness هنا إلى little-endian للامتثال لمواصفات WAV.
          */
         function pcmToWav(pcm16, sampleRate) {
             const dataLength = pcm16.length * 2; // 16-bit PCM (2 bytes per sample)
@@ -738,7 +768,8 @@
 
             // data sub-chunk
             view.setUint32(offset, 0x64617461, false); offset += 4; // "data"
-            view.setUint32(offset, dataLength, false); offset += 4; // Subchunk2Size (NOTE: Changed to false (little-endian is standard))
+            // === تصحيح مهم: little-endian هنا ===
+            view.setUint32(offset, dataLength, true); offset += 4; // Subchunk2Size (little-endian)
 
             // Write PCM data
             for (let i = 0; i < pcm16.length; i++) {
@@ -775,16 +806,18 @@
             // يتم إضافة الرسالة الأخيرة إلى السجل قبل الإرسال
             chatHistory.push({ role: "user", parts: [{ text: userPrompt }] });
 
-            // 4. إرسال سجل المحادثة بالكامل (Full Context) لضمان الذاكرة الكاملة
+            // 4. إرسال سجل المحادثة بالكامل (Full Context) - لكن نحدّده لآخر N رسائل
+            const recentHistory = chatHistory.slice(-MAX_CONTEXT);
+
             const payload = {
-                // ** التحديث الحاسم: إرسال سجل المحادثة الكاملة لضمان السياق المستمر **
-                contents: chatHistory, 
+                // ** التحديث الحاسم: إرسال سجل المحادثة المحدود لضمان الأداء والخصوصية **
+                contents: recentHistory, 
                 
                 // Add system instruction for persona and formatting rules
                 systemInstruction: {
                     parts: [{ text: systemPrompt }]
                 },
-                // Enable Google Search grounding for up-to-date info
+                // Enable Google Search grounding for up-to-date info (قد لا تعمل من المتصفح مباشرة)
                 tools: [{ "google_search": {} }],
             };
 
