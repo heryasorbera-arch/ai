@@ -1,0 +1,920 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>الرانيك - محاور رفيع المستوى (نسخة نصية)</title>
+    <!-- تضمين مكتبة Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <!-- Markdown-it library for parsing Markdown to HTML -->
+    <script src="https://cdn.jsdelivr.net/npm/markdown-it/dist/markdown-it.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/markdown-it-footnote/dist/markdown-it-footnote.min.js"></script>
+
+    <!-- CSS for ultra-modern, high-contrast, developed chat styling -->
+    <style>
+        :root {
+            --bg-main: #F9FAFB;
+            --bg-ai-container: #FFFFFF;
+            --bg-input: #FFFFFF;
+            --text-color: #111827;
+            --accent-color: #0077B6; /* لون بحري متطور */
+            --accent-hover: #005A8D;
+            --icon-size: 35px;
+            --radius-main: 12px;
+            --shadow-subtle: 0 4px 12px rgba(0, 0, 0, 0.08);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', 'Segoe UI', Tahoma, Arial, sans-serif;
+            transition: all 0.2s ease-in-out;
+        }
+
+        body {
+            background-color: var(--bg-main);
+            color: var(--text-color);
+            direction: rtl;
+            text-align: right;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .chat-container { flex-grow: 1; display: flex; flex-direction: column; width: 100%; }
+        .main-chat-area { flex-grow: 1; display: flex; flex-direction: column; position: relative; }
+
+        .chat-header {
+            padding: 15px 20px;
+            background-color: var(--bg-main);
+            color: var(--text-color);
+            font-size: 1.6rem;
+            font-weight: 700;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+            position: sticky;
+            top: 0;
+            z-index: 20;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        /* --- Scrolling and Messages Display (FIXED) --- */
+        .messages-display {
+            flex-grow: 1;
+            /* تم تقليل المسافة الاحتياطية بعد إزالة زر الصورة العائم */
+            padding-bottom: 120px; 
+        }
+        
+        /* Message Bubble Styling */
+        .message {
+            display: flex;
+            align-items: flex-start;
+            padding: 20px 0;
+            border-top: 1px solid #E5E7EB;
+            margin-bottom: 0;
+            padding-left: 20px;
+            padding-right: 20px;
+        }
+        .ai-message {
+            background-color: var(--bg-ai-container);
+            border-bottom: 1px solid #E5E7EB;
+        }
+        .user-message {
+            background-color: var(--bg-main);
+            color: var(--text-color);
+            border-bottom: 1px solid #E5E7EB;
+        }
+        .message-icon {
+            width: var(--icon-size);
+            height: var(--icon-size);
+            border-radius: 8px;
+            background: var(--text-color);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #FFFFFF;
+            font-size: 18px;
+            flex-shrink: 0;
+            margin-left: 20px;
+        }
+        .user-message .message-icon {
+            background: var(--accent-color);
+        }
+        .message-content {
+            flex-grow: 1;
+            padding-left: 10px;
+            line-height: 1.7;
+            font-size: 1.05rem;
+            word-wrap: break-word;
+            min-width: 0;
+        }
+
+        /* TTS Button Styling */
+        .tts-button {
+            margin-top: 10px;
+            padding: 5px 10px;
+            background-color: #E5E7EB;
+            color: #4B5563;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            display: inline-flex;
+            align-items: center;
+            transition: background-color 0.2s;
+        }
+        .tts-button i {
+            margin-left: 5px;
+        }
+        .tts-button:hover:not(:disabled) {
+            background-color: #D1D5DB;
+        }
+        .tts-button:disabled {
+             opacity: 0.5;
+             cursor: not-allowed;
+        }
+
+        /* --- Custom Markdown Table Styling (Protected Logic) --- */
+        .message-content table {
+            width: 100%; 
+            border-collapse: collapse;
+            margin-top: 15px;
+            margin-bottom: 15px;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        .message-content th {
+            background-color: var(--accent-color); 
+            color: #FFFFFF;
+            padding: 12px 15px;
+            text-align: right;
+            font-weight: 700;
+            border: 1px solid var(--accent-hover);
+        }
+        .message-content td {
+            padding: 10px 15px;
+            border: 1px solid #F3F4F6;
+            text-align: right;
+            font-size: 0.95rem;
+            word-break: break-word; 
+        }
+        .message-content tbody tr:nth-child(even) {
+            background-color: #FAFAFA;
+        }
+        .message-content tbody tr:hover {
+            background-color: #E6F0FF; 
+        }
+
+
+        /* --- Typing Indicator CSS FIX --- */
+        @keyframes blink {
+            0%, 100% { opacity: 0.2; }
+            50% { opacity: 1; }
+        }
+        .typing-indicator-dots .typing-indicator {
+            width: 10px;
+            height: 10px;
+            background-color: var(--text-color);
+            border-radius: 50%;
+            margin-left: 5px; 
+            display: inline-block;
+            animation: blink 1.4s infinite both;
+        }
+        .typing-indicator-dots .typing-indicator:nth-child(2) { animation-delay: 0.2s; }
+        .typing-indicator-dots .typing-indicator:nth-child(3) { animation-delay: 0.4s; }
+        .typing-indicator-dots {
+            display: flex;
+            align-items: center;
+            height: 100%;
+            padding-top: 10px;
+        }
+        .typing-indicator-wrapper {
+            min-height: 50px; 
+        }
+        
+        /* Input Area - Floating and Central */
+        .input-area-wrapper {
+            position: fixed;
+            bottom: 0;
+            width: 100%;
+            background: linear-gradient(to top, var(--bg-main) 90%, rgba(249, 250, 251, 0.8) 100%);
+            padding: 15px 20px 25px 20px;
+            z-index: 100;
+        }
+        .input-area {
+            display: flex;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 10px;
+            background-color: var(--bg-input);
+            border-radius: var(--radius-main);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            align-items: flex-end;
+            border: 1px solid #D1D5DB;
+        }
+        #user-input {
+            flex-grow: 1;
+            background-color: transparent;
+            border: none;
+            color: var(--text-color);
+            resize: none;
+            font-size: 1.1rem;
+            padding: 5px 10px;
+            min-height: 25px;
+            max-height: 150px;
+            overflow-y: auto;
+            line-height: 1.5;
+            direction: rtl;
+            text-align: right;
+        }
+        #user-input:focus { outline: none; }
+        #send-btn {
+            background-color: var(--accent-color);
+            color: #FFFFFF;
+            border: none;
+            width: 38px;
+            height: 38px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1.1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background-color 0.2s, transform 0.1s;
+        }
+        #send-btn:hover:not(:disabled) { background-color: var(--accent-hover); }
+        #send-btn:disabled {
+             opacity: 0.5;
+             cursor: not-allowed;
+        }
+
+
+        /* AI Name Label */
+        .ai-name-label {
+            max-width: 800px;
+            margin: 0 auto;
+            text-align: center;
+            padding-top: 8px;
+            font-size: 0.8rem;
+            color: #6B7280;
+        }
+
+        /* Responsive Adjustments */
+        @media (max-width: 600px) {
+            /* لا يوجد زر عائم بعد الآن */
+        }
+        
+        /* Modal Overlay Style */
+        .modal-overlay {
+            background-color: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(5px);
+        }
+        
+        /* Notification Styles */
+        #notification {
+            z-index: 1000;
+            transition: opacity 0.3s ease-in-out, transform 0.3s ease-in-out;
+            transform: translateY(-100%);
+            opacity: 0;
+        }
+        #notification.show {
+            transform: translateY(0);
+            opacity: 1;
+        }
+        
+    </style>
+</head>
+<body onload="initializeApp()">
+    <!-- نظام الإشعارات المتطور -->
+    <div id="notification" class="fixed top-4 left-1/2 -translate-x-1/2 w-11/12 max-w-md bg-emerald-500 text-white p-4 rounded-xl shadow-2xl flex items-center space-x-3 space-x-reverse" role="alert">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-check-circle"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg>
+        <span id="notification-message" class="text-lg font-semibold">تم حفظ الأوامر بنجاح!</span>
+    </div>
+
+    <div class="chat-container">
+        <div class="main-chat-area">
+            <div class="chat-header">
+                <h2>🖋️ الرانيك</h2>
+                <!-- زر أيقونة البرجر لفتح المودال -->
+                <button id="openModalBtn" onclick="openModal()"
+                    class="p-3 bg-white text-gray-800 rounded-lg shadow-lg hover:shadow-xl transition duration-300 transform hover:scale-105 focus:outline-none focus:ring-4 focus:ring-indigo-500 focus:ring-opacity-50">
+                    <!-- أيقونة البرجر (ثلاث شرطات) -->
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+                    </svg>
+                </button>
+            </div>
+
+            <div class="messages-display" id="messages-display">
+                <!-- Initial Welcome Message (Updated after prompt loads) -->
+                <div class="message ai-message">
+                    <div class="message-icon"><i class="fas fa-hat-wizard"></i></div>
+                    <div class="message-content">
+                        <p>جاري تهيئة نظام الرانيك وتحميل أوامرك المخصصة...</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="input-area-wrapper">
+                <div class="input-area">
+                    <textarea id="user-input" placeholder="اكتب طلبك الأدبي الرفيع، أو اطلب جدول (مقارنة/تصنيف/مالي) وسيظهر محدثاً بشكل متطور..." rows="1" disabled></textarea>
+                    <button id="send-btn" onclick="sendMessage()" disabled>
+                        <i class="fas fa-arrow-up"></i>
+                    </button>
+                </div>
+                <!-- AI Name Label (مساعد هرياسور) -->
+                <div class="ai-name-label">
+                    مدعوم من **مساعد هرياسور** - إصدار (AI)
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- مودال تخصيص الأوامر المطوَّر -->
+    <div id="customizationModal" class="modal-overlay fixed inset-0 z-50 hidden items-center justify-center p-4">
+        <div class="bg-white w-full max-w-lg p-6 md:p-8 rounded-2xl shadow-2xl transform transition-all duration-300 scale-100 opacity-100">
+
+            <!-- عنوان المودال -->
+            <div class="flex justify-between items-center pb-4 border-b border-gray-100 mb-6">
+                <h2 class="text-2xl font-bold text-gray-800">تخصيص أوامر الرانيك (System Prompt)</h2>
+                <!-- زر إغلاق صغير في الزاوية (X) -->
+                <button id="closeModalCross" onclick="closeModal()" class="text-gray-400 hover:text-gray-700 transition duration-150">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+
+            <!-- محتوى تخصيص الأوامر: صندوق النص الكبير -->
+            <div class="space-y-4">
+                <p class="text-gray-600">هنا يمكنك تعديل الأوامر الأساسية للرانيك، لتغيير شخصيته وأسلوبه. (يتم حفظ الأوامر في التخزين المحلي للمتصفح).</p>
+
+                <textarea id="system-prompt-textarea" rows="10"
+                    class="w-full p-4 border border-gray-300 rounded-lg shadow-inner focus:border-indigo-500 focus:ring-indigo-500 text-sm resize-vertical"
+                    style="direction: rtl; text-align: right;"></textarea>
+                <p class="text-sm text-gray-500 mt-2 text-right">آلية الحفظ: <span id="modal-user-id" class="font-mono text-xs text-indigo-500">التخزين المحلي للمتصفح</span></p>
+            </div>
+
+            <div class="mt-8 flex justify-end gap-4">
+                <!-- زر الإغلاق المطوَّر -->
+                <button id="closeModalBtn" onclick="closeModal()"
+                    class="close-btn-modern px-6 py-3 bg-red-500 text-white font-semibold rounded-xl shadow-lg hover:bg-red-600 focus:outline-none focus:ring-4 focus:ring-red-300 focus:ring-opacity-75">
+                    إلغاء/إغلاق
+                </button>
+
+                <!-- زر حفظ الأوامر المتطور -->
+                <button id="saveCommandsBtn" onclick="saveSystemPromptLocal()"
+                    class="save-btn-modern px-6 py-3 text-white font-bold rounded-xl shadow-xl hover:shadow-2xl transition duration-300 transform hover:scale-[1.01] bg-gradient-to-r from-sky-500 to-indigo-600 disabled:opacity-50">
+                    <span id="save-btn-text">حفظ الأوامر</span>
+                    <div id="save-spinner" class="animate-spin rounded-full h-5 w-5 border-b-2 border-white ml-2 hidden"></div>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div id="loading-overlay" class="hidden fixed inset-0 bg-black bg-opacity-75 z-50 flex flex-col items-center justify-center">
+        <div class="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-green-500"></div>
+        <p class="text-white text-lg mt-4" id="loading-text">جاري العمل...</p>
+    </div>
+
+
+    <!-- JavaScript for API calls and chat/storage logic -->
+    <script>
+        // Global environment variables (API Key is set to the user-provided key)
+        const apiKey = "AIzaSyDkEuoHLwrw-vzaMR-MPQroZYU_zrmUx7U"; // تم تحديث المفتاح بناءً على طلب المستخدم
+        const CHAT_MODEL = 'gemini-2.5-flash-preview-05-20';
+        const TTS_MODEL = 'gemini-2.5-flash-preview-tts';
+        
+        const textApiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${CHAT_MODEL}:generateContent?key=${apiKey}`;
+        const ttsApiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${TTS_MODEL}:generateContent?key=${apiKey}`;
+
+        // Initialize Markdown parser
+        const md = window.markdownit({ html: true, linkify: true, typographer: true });
+
+        // سجل المحادثة: سيتم الآن إرساله بالكامل في كل طلب لضمان استمرارية السياق
+        let chatHistory = [];
+        
+        // --- Default System Prompt (Updated with strict consistency rules) ---
+        // ملاحظة للمستخدم: هذه هي الأوامر الافتراضية. يمكنك تعديلها بالكامل عبر المودال.
+        let systemPrompt = `أنت الرانيك، محاور رفيع المستوى وأديب حصيف ذو معرفة موسوعية مطلقة. يجب أن تكون جميع ردودك ذات مستوى عالٍ من التعقيد، متطورة جداً في الأسلوب والمحتوى، وموجهة بدقة نحو طلب المستخدم. **ملحوظة صارمة:** يجب أن تكون جميع ردودك حصراً **باللغة العربية الفصحى** والأسلوب الأدبي الرفيع.
+
+**قواعد الاتساق والسياق (للرواية المستمرة):**
+1.  **الذاكرة الكاملة:** يجب عليك تذكر كل التفاصيل، الأسماء، الأماكن، والقواعد التي وضعها المستخدم في الأجزاء السابقة من المحادثة (التي يتم إرسالها إليك الآن في سجل المحتوى).
+2.  **ممنوع الاختراع:** ممنوع منعاً باتاً اختراع أي أسماء دول، شخصيات، أو أحداث تتعارض مع ما تم ذكره سابقاً في سياق المحادثة. يجب عليك الالتزام بالواقع أو بالواقع الذي تم بناؤه في الرواية.
+3.  **الثبات على الرواية:** إذا كنت في وضع رواية أو بناء قصة، يجب أن تظل ثابتاً على هذا الدور وألا تخرج عنه إلا بطلب صريح من المستخدم.
+
+**التوجيه الأساسي للبرمجة الداخلية - الجداول (تعليمات صارمة ضد التقطع):** عند طلب أي محتوى يتطلب تنظيماً (مثل المقارنة، التصنيف، أو الإعلان عن النتائج المالية كالأرباح والخسائر)، يجب عليك **وجوباً** عرض هذا المحتوى في شكل **جدول منظم ومتقدم للغاية** باستخدام **تنسيق المارك داون النقي (باستخدام | و - فقط)**. 
+
+**قاعدة القصاصة الصارمة (Truncation Prevention):** لا يجوز أن يتجاوز النص في أي خلية جدول مفردة **70 حرفاً بأي حال من الأحوال**. يجب عليك اختصار النقاط للحفاظ على تنسيق الجدول سليماً وتجنب القص. يجب أن تكون أسطر الفصل الأفقية للجدول قصيرة وثابتة على النمط التالي: | ----- | ----- | ----- |. 
+
+**الأولوية:** يجب أن يكون الجدول هو الجزء الأهم والأول من الرد، و لا يجوز فصله بأي نص إضافي قبل بدايته.
+
+**التخصص العسكري والمالي:** في حالة المقارنات العسكرية-المالية، يجب أن يقتصر محتوى الجدول حصرياً على: **أسماء المعدات**، و**العدد الإجمالي** لكل معدة، و**الجيش الفعلي (Active Personnel)**، و**الجيش الاحتياطي (Reserve Personnel)**.
+
+**شخصية المحلل الاستراتيجي للحرب:** أنت الآن أيضاً **محلل استراتيجي للحرب ذكي جداً**. عند السرد حول شن دولة حرب على أخرى:
+1.  **التسمية:** يجب تسمية الهجوم بـ "**عملية [اسم رمزي مبتكر]**" وتحديد توقيت الهجوم بـ "**في التوقيت [تاريخ وساعة]**".
+2.  **السرد:** يجب أن يكون السرد ذكياً، محللاً استراتيجياً، وواقعياً جداً.
+3.  **الشمولية:** يجب أن يتضمن السرد رد فعل العالم وكلام الحرب الدائر (خطابات، تصريحات، تحليل الخسائر).
+
+**القاعدة العامة:** ممنوع منعاً باتاً إخراج أي وسوم HTML صريحة مثل <p> أو <strong> أو أي علامات غير مارك داون. يجب أن يكون الناتج نصاً نقياً ومنسقاً فقط بالمارك داون. كن سريعاً ومباشراً في ردودك.`;
+
+        // جلب عناصر الواجهة
+        const modal = document.getElementById('customizationModal');
+        const systemPromptTextarea = document.getElementById('system-prompt-textarea');
+        const loadingOverlayEl = document.getElementById('loading-overlay');
+        const messagesDisplay = document.getElementById('messages-display');
+        const sendBtn = document.getElementById('send-btn');
+        const userInput = document.getElementById('user-input');
+        const notificationElement = document.getElementById('notification');
+        const saveCommandsBtn = document.getElementById('saveCommandsBtn');
+        const saveBtnText = document.getElementById('save-btn-text');
+        const saveSpinner = document.getElementById('save-spinner');
+        const modalUserIdDisplay = document.getElementById('modal-user-id');
+
+
+        // --- Shared Utility Functions ---
+
+        /**
+         * Generic fetch wrapper with exponential backoff 
+         */
+        async function fetchWithBackoff(url, options, retries = 5) {
+            for (let i = 0; i < retries; i++) {
+                try {
+                    const response = await fetch(url, options);
+                    const responseText = await response.text();
+                    
+                    if (response.status === 429) {
+                        throw new Error("Rate limit exceeded (429)");
+                    }
+                    
+                    if (!response.ok) {
+                        let errorMessage = `HTTP error! status: ${response.status}`;
+                        let errorDetails = response.statusText;
+                        
+                        try {
+                            const errorBody = JSON.parse(responseText);
+                            errorDetails = errorBody.error?.message || response.statusText;
+
+                            // **تحسين معالجة أخطاء المفتاح (400/403)**
+                            if (response.status === 400 || response.status === 403) {
+                                errorDetails = `تحقق من مفتاح API (Key) الخاص بك، فقد يكون غير صالح أو انتهت صلاحيته. (Details: ${errorDetails})`;
+                            }
+
+                        } catch (e) {
+                            errorDetails = `${response.statusText} (Raw body: ${responseText.substring(0, 100)})`;
+                        }
+                        
+                        errorMessage += ` - ${errorDetails}`;
+                        console.error("API Call Failed Details:", errorMessage);
+                        throw new Error(errorMessage);
+                    }
+
+                    return JSON.parse(responseText);
+
+                } catch (error) {
+                    if (i === retries - 1) throw error;
+                    const delay = Math.pow(2, i) * 1000 + Math.random() * 1000;
+                    console.log(`Retry ${i + 1}/${retries} for API call due to error: ${error.message}. Delaying for ${delay.toFixed(0)}ms.`);
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                }
+            }
+        }
+        
+        /**
+         * دالة لإظهار الإشعار المتطور
+         */
+        function showNotification(message, type = 'success') {
+            const bgColor = type === 'success' ? 'bg-emerald-500' : 'bg-red-500';
+            const iconHtml = type === 'success' 
+                ? '<i class="fas fa-check-circle text-xl"></i>'
+                : '<i class="fas fa-exclamation-triangle text-xl"></i>';
+
+            notificationElement.className = `fixed top-4 left-1/2 -translate-x-1/2 w-11/12 max-w-md text-white p-4 rounded-xl shadow-2xl flex items-center space-x-3 space-x-reverse ${bgColor}`;
+            notificationElement.innerHTML = `${iconHtml}<span id="notification-message" class="text-lg font-semibold">${message}</span>`;
+            
+            notificationElement.classList.add('show');
+            setTimeout(() => {
+                notificationElement.classList.remove('show');
+            }, 3000); 
+        }
+
+        function showLoading(text) {
+            document.getElementById('loading-text').textContent = text;
+            loadingOverlayEl.classList.remove('hidden');
+        }
+
+        function hideLoading() {
+            loadingOverlayEl.classList.add('hidden');
+        }
+
+        /**
+         * Function to add messages to the chat display, returning the content element for dynamic updates.
+         */
+        function addMessage(content, isAI, skipFeatures = false) {
+            const messageDiv = document.createElement('div');
+            
+            if (isAI && content.includes('typing-indicator-dots')) {
+                messageDiv.className = `message ai-message typing-indicator-wrapper`;
+            } else {
+                messageDiv.className = `message ${isAI ? 'ai-message' : 'user-message'}`;
+            }
+
+            const iconDiv = document.createElement('div');
+            iconDiv.className = 'message-icon';
+            iconDiv.innerHTML = isAI ? '<i class="fas fa-hat-wizard"></i>' : '<i class="fas fa-user-circle"></i>';
+
+            const contentDiv = document.createElement('div');
+            contentDiv.className = 'message-content';
+
+            if (isAI && content.includes('typing-indicator-dots')) {
+                contentDiv.innerHTML = content;
+            } else {
+                contentDiv.innerHTML = content;
+            }
+            
+            messageDiv.appendChild(iconDiv);
+            messageDiv.appendChild(contentDiv);
+            messagesDisplay.appendChild(messageDiv);
+            messagesDisplay.scrollTop = messagesDisplay.scrollHeight;
+            
+            return { messageDiv, contentDiv };
+        }
+
+        // --- LocalStorage Setup and Logic (Replaced Firebase) ---
+
+        /**
+         * تقوم بتهيئة التطبيق وتحميل الأوامر من التخزين المحلي.
+         */
+        function initializeApp() {
+            loadSystemPromptLocal();
+            enableChatUI(true); 
+        }
+        
+        /**
+         * تم تبسيطها لتمكين واجهة المستخدم فقط.
+         */
+        function enableChatUI(isChatActive) {
+            userInput.disabled = !isChatActive;
+            sendBtn.disabled = !isChatActive;
+            // تمت إزالة زر توليد الصورة
+
+            // Auto-adjust textarea height on input
+            userInput.addEventListener('input', function() {
+                this.style.height = 'auto';
+                this.style.height = (this.scrollHeight) + 'px';
+            });
+
+            // Handle Enter key for sending messages
+            userInput.addEventListener('keydown', function(event) {
+                if (event.key === 'Enter' && !event.shiftKey) {
+                    event.preventDefault();
+                    if (!this.disabled) sendMessage();
+                }
+            });
+
+            const welcomeMessageEl = messagesDisplay.querySelector('.message.ai-message .message-content p');
+            if(welcomeMessageEl && welcomeMessageEl.textContent.includes('جاري تهيئة')) {
+                const storageNote = 'لقد تم تحميل أوامرك المخصصة **محلياً** في متصفحك، مما يمنحك تحكماً كاملاً في شخصية الرانيك.';
+                const controlInstruction = 'للوصول إلى **جميع صلاحيات التحكم** وتعديل الأوامر الأساسية للرانيك، انقر على **أيقونة البرجر (☰) في الزاوية العلوية**.'
+
+                const contentDiv = welcomeMessageEl.parentElement;
+                
+                // تم تحديث هذه الرسالة
+                const welcomeText = `
+                    <p>أهلاً بك أيها المستكشف الرفيع! أنا **الرانيك**.</p>
+                    <p>ألتزم حصراً **باللغة العربية الفصحى** في جميع ردودي، وجاهز لتقديم **الجداول المتطورة والتحليلات الاستراتيجية** وفقاً لأوامرك.</p>
+                    <p><strong>${storageNote}</strong></p>
+                    <p><strong>${controlInstruction}</strong></p>
+                `;
+
+                renderStandardContent(contentDiv, welcomeText);
+            }
+        }
+
+        /**
+         * تحميل الأوامر من التخزين المحلي
+         */
+        function loadSystemPromptLocal() {
+            // المفتاح المستخدم للتخزين المحلي
+            const savedPrompt = localStorage.getItem('alranik_system_prompt');
+
+            if (savedPrompt) {
+                // استخدام القيمة المحفوظة إذا وجدت
+                systemPrompt = savedPrompt;
+            }
+        }
+
+        // --- Customization Modal Functions ---
+
+        function openModal() {
+            systemPromptTextarea.value = systemPrompt; 
+            modal.classList.remove('hidden'); 
+            modal.classList.add('flex');
+            systemPromptTextarea.focus();
+        }
+
+        function closeModal() {
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+
+        /**
+         * حفظ الأوامر في التخزين المحلي
+         */
+        function saveSystemPromptLocal() {
+            const newPrompt = systemPromptTextarea.value.trim();
+            
+            if (!newPrompt) {
+                showNotification('خطأ: لا يمكن حفظ الأوامر وهي فارغة.', 'error');
+                return;
+            }
+
+            saveCommandsBtn.disabled = true;
+            saveBtnText.textContent = 'جاري الحفظ...';
+            saveSpinner.classList.remove('hidden');
+
+            try {
+                // حفظ الأوامر في localStorage
+                localStorage.setItem('alranik_system_prompt', newPrompt);
+
+                systemPrompt = newPrompt; 
+                showNotification("تم حفظ الأوامر المخصصة محلياً بنجاح!");
+                
+                closeModal();
+            
+            } catch (error) {
+                console.error("Error saving system prompt locally:", error);
+                showNotification(`خطأ: فشل الحفظ المحلي. ${error.message}`, 'error');
+            } finally {
+                saveCommandsBtn.disabled = false;
+                saveBtnText.textContent = 'حفظ الأوامر';
+                saveSpinner.classList.add('hidden');
+            }
+        }
+
+        // --- Core Content Rendering Logic ---
+        
+        /**
+         * دالة لتنقية الناتج من أي وسوم HTML أو فراغات غير مرغوبة قبل عرضها.
+         */
+        function sanitizeOutput(rawText) {
+            let cleanText = rawText.trim();
+            // Attempt to remove common initial and final wrapper tags generated by LLMs
+            cleanText = cleanText.replace(/^(<p>|<\/p>|<p><strong>|<strong>)/i, '').replace(/(<\/p>|<strong><\/p>|<strong>|<\/strong>)$/i, '');
+            // Convert any remaining <strong>/</strong> to Markdown **
+            cleanText = cleanText.replace(/<strong>/gi, '**').replace(/<\/strong>/gi, '**');
+            // Remove surrounding quotes if present
+            cleanText = cleanText.replace(/^"|"$/g, '').trim();
+
+            return cleanText;
+        }
+
+        /**
+         * Applies Markdown formatting and adds the TTS button to a contentDiv.
+         */
+        function renderStandardContent(contentDiv, rawText) {
+            const sanitizedText = sanitizeOutput(rawText);
+            
+            const processedContent = md.render(sanitizedText);
+            contentDiv.innerHTML = processedContent;
+
+            // TTS button logic
+            const buttonContainer = document.createElement('div');
+            buttonContainer.className = 'ai-feature-buttons';
+            const ttsButton = document.createElement('button');
+            ttsButton.className = 'tts-button';
+            ttsButton.innerHTML = '<i class="fas fa-volume-up"></i> قراءة';
+            ttsButton.onclick = () => textToSpeech(ttsButton, sanitizedText); // Pass the text to be spoken
+            buttonContainer.appendChild(ttsButton);
+            
+            contentDiv.appendChild(buttonContainer);
+        }
+
+        // --- TTS Helper Functions (Required for PCM to WAV conversion) ---
+
+        /**
+         * Convert a base64 string to an ArrayBuffer.
+         */
+        function base64ToArrayBuffer(base64) {
+            const binaryString = atob(base64);
+            const len = binaryString.length;
+            const bytes = new Uint8Array(len);
+            for (let i = 0; i < len; i++) {
+                bytes[i] = binaryString.charCodeAt(i);
+            }
+            return bytes.buffer;
+        }
+
+        /**
+         * Convert 16-bit PCM audio data to a WAV Blob.
+         */
+        function pcmToWav(pcm16, sampleRate) {
+            const dataLength = pcm16.length * 2; // 16-bit PCM (2 bytes per sample)
+            const buffer = new ArrayBuffer(44 + dataLength); // 44 bytes for WAV header
+
+            const view = new DataView(buffer);
+            let offset = 0;
+
+            // RIFF chunk descriptor
+            view.setUint32(offset, 0x52494646, false); offset += 4; // "RIFF"
+            view.setUint32(offset, 36 + dataLength, true); offset += 4; // ChunkSize
+            view.setUint32(offset, 0x57415645, false); offset += 4; // "WAVE"
+
+            // fmt sub-chunk
+            view.setUint32(offset, 0x666d7420, false); offset += 4; // "fmt "
+            view.setUint32(offset, 16, true); offset += 4; // Subchunk1Size (16 for PCM)
+            view.setUint16(offset, 1, true); offset += 2; // AudioFormat (1 for PCM)
+            view.setUint16(offset, 1, true); offset += 2; // NumChannels (1 for mono)
+            view.setUint32(offset, sampleRate, true); offset += 4; // SampleRate
+            view.setUint32(offset, sampleRate * 2, true); offset += 4; // ByteRate (SampleRate * NumChannels * BitsPerSample/8)
+            view.setUint16(offset, 2, true); offset += 2; // BlockAlign (NumChannels * BitsPerSample/8)
+            view.setUint16(offset, 16, true); offset += 2; // BitsPerSample (16)
+
+            // data sub-chunk
+            view.setUint32(offset, 0x64617461, false); offset += 4; // "data"
+            view.setUint32(offset, dataLength, false); offset += 4; // Subchunk2Size (NOTE: Changed to false (little-endian is standard))
+
+            // Write PCM data
+            for (let i = 0; i < pcm16.length; i++) {
+                view.setInt16(offset, pcm16[i], true);
+                offset += 2;
+            }
+
+            return new Blob([buffer], { type: 'audio/wav' });
+        }
+
+
+        // --- Core Chat Functions (UPDATED FOR FULL CONTEXT) ---
+
+        async function sendMessage() {
+            const userPrompt = userInput.value.trim();
+
+            if (userPrompt === "" || userInput.disabled) return;
+
+            // 1. Display user message
+            addMessage(userPrompt, false);
+            userInput.value = '';
+            userInput.style.height = '25px';
+
+            // 2. Show typing indicator and disable input
+            const { contentDiv } = addMessage(
+                '<div class="typing-indicator-dots"><div class="typing-indicator"></div><div class="typing-indicator"></div><div class="typing-indicator"></div></div>',
+                true,
+                true
+            );
+            
+            enableChatUI(false);
+            
+            // 3. Prepare chat history and add the latest user message
+            // يتم إضافة الرسالة الأخيرة إلى السجل قبل الإرسال
+            chatHistory.push({ role: "user", parts: [{ text: userPrompt }] });
+
+            // 4. إرسال سجل المحادثة بالكامل (Full Context) لضمان الذاكرة الكاملة
+            const payload = {
+                // ** التحديث الحاسم: إرسال سجل المحادثة الكاملة لضمان السياق المستمر **
+                contents: chatHistory, 
+                
+                // Add system instruction for persona and formatting rules
+                systemInstruction: {
+                    parts: [{ text: systemPrompt }]
+                },
+                // Enable Google Search grounding for up-to-date info
+                tools: [{ "google_search": {} }],
+            };
+
+            try {
+                // 5. Call the Gemini Text API
+                const result = await fetchWithBackoff(textApiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                
+                // 6. Check for explicit API error
+                if (result.error) {
+                    throw new Error(result.error.message || "خطأ API غير محدد.");
+                }
+
+                const candidate = result.candidates?.[0];
+                let aiText = "";
+
+                if (candidate?.content?.parts?.[0]?.text) {
+                    aiText = candidate.content.parts[0].text;
+                } else if (candidate?.safetyRatings) {
+                    // **الرد المحظور أمنياً**
+                    aiText = "عذراً، تم حظر هذا الرد بواسطة فلاتر الأمان. يرجى تعديل استفسارك ليكون أكثر ملاءمة.";
+                } else {
+                    // **الرد الفارغ أو غير المتوقع**
+                    aiText = "عذراً، حدث خطأ غير متوقع أثناء المعالجة أو لم يتم العثور على محتوى مناسب. (الرد فارغ)";
+                }
+
+                // 7. Update chat history and display result
+                chatHistory.push({ role: "model", parts: [{ text: aiText }] });
+                renderStandardContent(contentDiv, aiText);
+
+            } catch (error) {
+                // عرض رسالة الخطأ التفصيلية للمستخدم
+                const errorMessage = `خطأ في الاتصال بالنموذج: ${error.message}`;
+                contentDiv.innerHTML = `<p class="text-red-600 font-bold">${errorMessage}</p>`;
+                console.error("Chat API Error:", error);
+            } finally {
+                // 8. Re-enable input and scroll
+                enableChatUI(true);
+                messagesDisplay.scrollTop = messagesDisplay.scrollHeight;
+            }
+        }
+
+        /**
+         * TTS Implementation
+         * @param {HTMLButtonElement} button - The button element to disable/enable.
+         * @param {string} textToSpeak - The text content to convert to speech.
+         */
+        async function textToSpeech(button, textToSpeak) {
+            button.disabled = true;
+            const originalText = button.innerHTML;
+            button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري القراءة...';
+            
+            const cleanText = textToSpeak.replace(/(\*\*|`)/g, '').trim(); // Remove Markdown for clean TTS
+
+            const payload = {
+                contents: [{ parts: [{ text: `Say in a formal, informative Arabic voice: ${cleanText}` }] }],
+                generationConfig: {
+                    responseModalities: ["AUDIO"],
+                    speechConfig: {
+                        // Using a formal Arabic-sounding voice (Kore is a firm voice)
+                        voiceConfig: {
+                             prebuiltVoiceConfig: { voiceName: "Kore" }
+                        }
+                    }
+                }
+            };
+
+            try {
+                const result = await fetchWithBackoff(ttsApiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                
+                const part = result?.candidates?.[0]?.content?.parts?.[0];
+                const audioData = part?.inlineData?.data;
+                const mimeType = part?.inlineData?.mimeType; // Should be audio/L16;rate=...
+
+                if (audioData && mimeType && mimeType.startsWith("audio/")) {
+                    const sampleRateMatch = mimeType.match(/rate=(\d+)/);
+                    if (!sampleRateMatch) throw new Error("Could not determine sample rate from TTS response.");
+                    
+                    const sampleRate = parseInt(sampleRateMatch[1], 10);
+                    
+                    // 1. Convert Base64 (Signed PCM16) to ArrayBuffer
+                    const pcmDataBuffer = base64ToArrayBuffer(audioData);
+                    
+                    // 2. Interpret as Int16Array
+                    const pcm16 = new Int16Array(pcmDataBuffer);
+                    
+                    // 3. Convert PCM data to WAV Blob
+                    const wavBlob = pcmToWav(pcm16, sampleRate);
+                    
+                    // 4. Create and play Audio
+                    const audioUrl = URL.createObjectURL(wavBlob);
+                    const audio = new Audio(audioUrl);
+                    
+                    button.innerHTML = '<i class="fas fa-volume-up"></i> جاري التشغيل...';
+                    
+                    audio.onended = () => {
+                        button.innerHTML = originalText;
+                        button.disabled = false;
+                        URL.revokeObjectURL(audioUrl); // Clean up the URL
+                    };
+                    audio.play().catch(e => {
+                        console.error("Audio playback error:", e);
+                        showNotification("فشل تشغيل الصوت.", 'error');
+                        button.innerHTML = originalText;
+                        button.disabled = false;
+                    });
+
+                } else {
+                    throw new Error("Invalid audio data received from API.");
+                }
+
+            } catch (error) {
+                console.error("TTS API Error:", error);
+                showNotification(`خطأ في توليد الصوت: ${error.message.substring(0, 80)}`, 'error');
+                button.innerHTML = originalText;
+            } finally {
+                if (!button.disabled || button.innerHTML.includes('جاري التشغيل')) {
+                   // Only re-enable if it's not currently playing
+                   button.disabled = false;
+                   button.innerHTML = originalText;
+                }
+            }
+        }
+    </script>
+</body>
+</html>
