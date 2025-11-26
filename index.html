@@ -3,952 +3,676 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>الرانيك - محاور رفيع المستوى (نسخة نصية - نسخة معدّلة)</title>
-    <!-- تضمين مكتبة Tailwind CSS -->
+    <title>الرانيك (الدردشة)</title>
+    <!-- تضمين Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Font Awesome Icons -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <!-- Markdown-it library for parsing Markdown to HTML -->
-    <script src="https://cdn.jsdelivr.net/npm/markdown-it/dist/markdown-it.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/markdown-it-footnote/dist/markdown-it-footnote.min.js"></script>
-
-    <!-- DOMPurify for sanitizing HTML generated from Markdown -->
-    <script src="https://cdn.jsdelivr.net/npm/dompurify@2.4.0/dist/purify.min.js"></script>
-
-    <!-- CSS for ultra-modern, high-contrast, developed chat styling -->
     <style>
-        :root {
-            --bg-main: #F9FAFB;
-            --bg-ai-container: #FFFFFF;
-            --bg-input: #FFFFFF;
-            --text-color: #111827;
-            --accent-color: #0077B6; /* لون بحري متطور */
-            --accent-hover: #005A8D;
-            --icon-size: 35px;
-            --radius-main: 12px;
-            --shadow-subtle: 0 4px 12px rgba(0, 0, 0, 0.08);
-        }
-
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-            font-family: 'Inter', 'Segoe UI', Tahoma, Arial, sans-serif;
-            transition: all 0.2s ease-in-out;
-        }
-
+        /* خط "Cairo" هو خط بديل جيد وواضح يدعم العربية بشكل جيد */
+        @import url('https://fonts.googleapis.com/css2?family=Cairo:wght400;700&display=swap');
+        
         body {
-            background-color: var(--bg-main);
-            color: var(--text-color);
-            direction: rtl;
-            text-align: right;
-            min-height: 100vh;
+            font-family: 'Cairo', sans-serif;
+            direction: rtl; 
+            /* خلفية غنية لتبدو احترافية */
+            background-image: linear-gradient(to bottom right, #1a202c, #2d3748);
+            background-attachment: fixed;
+        }
+
+        /* حاوية الدردشة - ارتفاع مرن */
+        .chat-container {
+            flex-grow: 1; /* جعلها تنمو لملء المساحة المتاحة */
+            overflow-y: auto;
+            scroll-behavior: smooth;
+        }
+        
+        /* ضبط ارتفاع الحاوية الرئيسية */
+        .main-app-container {
+            min-height: 95vh;
+            max-width: 3xl;
+            margin: 0 auto;
             display: flex;
             flex-direction: column;
         }
 
-        .chat-container { flex-grow: 1; display: flex; flex-direction: column; width: 100%; }
-        .main-chat-area { flex-grow: 1; display: flex; flex-direction: column; position: relative; }
-
-        .chat-header {
-            padding: 15px 20px;
-            background-color: var(--bg-main);
-            color: var(--text-color);
-            font-size: 1.6rem;
-            font-weight: 700;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-            position: sticky;
-            top: 0;
-            z-index: 20;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
+        .message-bubble {
+            max-width: 85%;
         }
 
-        /* --- Scrolling and Messages Display (FIXED) --- */
-        .messages-display {
-            flex-grow: 1;
-            /* تم تقليل المسافة الاحتياطية بعد إزالة زر الصورة العائم */
-            padding-bottom: 120px; 
-        }
-        
-        /* Message Bubble Styling */
-        .message {
-            display: flex;
-            align-items: flex-start;
-            padding: 20px 0;
-            border-top: 1px solid #E5E7EB;
-            margin-bottom: 0;
-            padding-left: 20px;
-            padding-right: 20px;
-        }
-        .ai-message {
-            background-color: var(--bg-ai-container);
-            border-bottom: 1px solid #E5E7EB;
-        }
-        .user-message {
-            background-color: var(--bg-main);
-            color: var(--text-color);
-            border-bottom: 1px solid #E5E7EB;
-        }
-        .message-icon {
-            width: var(--icon-size);
-            height: var(--icon-size);
-            border-radius: 8px;
-            background: var(--text-color);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: #FFFFFF;
-            font-size: 18px;
-            flex-shrink: 0;
-            margin-left: 20px;
-        }
-        .user-message .message-icon {
-            background: var(--accent-color);
-        }
-        .message-content {
-            flex-grow: 1;
-            padding-left: 10px;
-            line-height: 1.7;
-            font-size: 1.05rem;
-            word-wrap: break-word;
-            min-width: 0;
-        }
-
-        /* TTS Button Styling */
-        .tts-button {
-            margin-top: 10px;
-            padding: 5px 10px;
-            background-color: #E5E7EB;
-            color: #4B5563;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 0.85rem;
-            display: inline-flex;
-            align-items: center;
-            transition: background-color 0.2s;
-        }
-        .tts-button i {
-            margin-left: 5px;
-        }
-        .tts-button:hover:not(:disabled) {
-            background-color: #D1D5DB;
-        }
-        .tts-button:disabled {
-             opacity: 0.5;
-             cursor: not-allowed;
-        }
-
-        /* --- Custom Markdown Table Styling (Protected Logic) --- */
-        .message-content table {
-            width: 100%; 
-            border-collapse: collapse;
-            margin-top: 15px;
-            margin-bottom: 15px;
-            border-radius: 8px;
-            overflow: hidden;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-        }
-        .message-content th {
-            background-color: var(--accent-color); 
-            color: #FFFFFF;
-            padding: 12px 15px;
-            text-align: right;
-            font-weight: 700;
-            border: 1px solid var(--accent-hover);
-        }
-        .message-content td {
-            padding: 10px 15px;
-            border: 1px solid #F3F4F6;
-            text-align: right;
-            font-size: 0.95rem;
-            word-break: break-word; 
-        }
-        .message-content tbody tr:nth-child(even) {
-            background-color: #FAFAFA;
-        }
-        .message-content tbody tr:hover {
-            background-color: #E6F0FF; 
-        }
-
-
-        /* --- Typing Indicator CSS FIX --- */
-        @keyframes blink {
-            0%, 100% { opacity: 0.2; }
-            50% { opacity: 1; }
-        }
-        .typing-indicator-dots .typing-indicator {
-            width: 10px;
-            height: 10px;
-            background-color: var(--text-color);
-            border-radius: 50%;
-            margin-left: 5px; 
-            display: inline-block;
-            animation: blink 1.4s infinite both;
-        }
-        .typing-indicator-dots .typing-indicator:nth-child(2) { animation-delay: 0.2s; }
-        .typing-indicator-dots .typing-indicator:nth-child(3) { animation-delay: 0.4s; }
-        .typing-indicator-dots {
-            display: flex;
-            align-items: center;
-            height: 100%;
-            padding-top: 10px;
-        }
-        .typing-indicator-wrapper {
-            min-height: 50px; 
-        }
-        
-        /* Input Area - Floating and Central */
-        .input-area-wrapper {
-            position: fixed;
-            bottom: 0;
+        /* تنسيق الجداول المتقدمة (لمطابقة طلب المستخدم) */
+        .prose table {
             width: 100%;
-            background: linear-gradient(to top, var(--bg-main) 90%, rgba(249, 250, 251, 0.8) 100%);
-            padding: 15px 20px 25px 20px;
-            z-index: 100;
-        }
-        .input-area {
-            display: flex;
-            max-width: 800px;
-            margin: 0 auto;
-            padding: 10px;
-            background-color: var(--bg-input);
-            border-radius: var(--radius-main);
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-            align-items: flex-end;
-            border: 1px solid #D1D5DB;
-        }
-        #user-input {
-            flex-grow: 1;
-            background-color: transparent;
-            border: none;
-            color: var(--text-color);
-            resize: none;
-            font-size: 1.1rem;
-            padding: 5px 10px;
-            min-height: 25px;
-            max-height: 150px;
-            overflow-y: auto;
-            line-height: 1.5;
-            direction: rtl;
+            margin-top: 1rem;
+            margin-bottom: 1rem;
+            border-collapse: collapse;
             text-align: right;
-        }
-        #user-input:focus { outline: none; }
-        #send-btn {
-            background-color: var(--accent-color);
-            color: #FFFFFF;
-            border: none;
-            width: 38px;
-            height: 38px;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 1.1rem;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: background-color 0.2s, transform 0.1s;
-        }
-        #send-btn:hover:not(:disabled) { background-color: var(--accent-hover); }
-        #send-btn:disabled {
-             opacity: 0.5;
-             cursor: not-allowed;
+            font-size: 0.9rem;
         }
 
-
-        /* AI Name Label */
-        .ai-name-label {
-            max-width: 800px;
-            margin: 0 auto;
-            text-align: center;
-            padding-top: 8px;
-            font-size: 0.8rem;
-            color: #6B7280;
+        .prose th, .prose td {
+            padding: 10px 15px;
+            border: 1px solid #4a5568; /* حدود رمادية داكنة */
         }
 
-        /* Responsive Adjustments */
-        @media (max-width: 600px) {
-            /* لا يوجد زر عائم بعد الآن */
+        .prose thead th {
+            background-color: #3182ce; /* لون أزرق جذاب للرؤوس */
+            color: #ffffff;
+            font-weight: bold;
+        }
+
+        .prose tbody tr:nth-child(even) {
+            background-color: #2d3748; /* لون صفوف زوجية مختلف */
+        }
+
+        .prose strong {
+            color: #4299e1; /* لون أزرق فاتح للنصوص الهامة */
+        }
+
+        /* تأثير تحميل بسيط */
+        .loader {
+            border-top-color: #63b3ed; /* أزرق فاتح */
+            -webkit-animation: spinner 1.5s linear infinite;
+            animation: spinner 1.5s linear infinite;
+        }
+
+        @-webkit-keyframes spinner {
+            0% { -webkit-transform: rotate(0deg); }
+            100% { -webkit-transform: rotate(360deg); }
+        }
+
+        @keyframes spinner {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
         }
         
-        /* Modal Overlay Style */
-        .modal-overlay {
-            background-color: rgba(0, 0, 0, 0.6);
-            backdrop-filter: blur(5px);
+        /* زيادة الهامش بين الفقرات داخل فقاعات الرسائل لضمان الفصل الواضح */
+        .message-bubble p {
+            margin-bottom: 0.75rem; 
         }
-        
-        /* Notification Styles */
-        #notification {
-            z-index: 1000;
-            transition: opacity 0.3s ease-in-out, transform 0.3s ease-in-out;
-            transform: translateY(-100%);
-            opacity: 0;
+
+        /* إزالة الهامش من آخر عنصر في الفقاعة لتجنب الفراغ الزائد */
+        .message-bubble > div > p:last-child {
+            margin-bottom: 0;
         }
-        #notification.show {
-            transform: translateY(0);
-            opacity: 1;
-        }
-        
     </style>
 </head>
-<body onload="initializeApp()">
-    <!-- نظام الإشعارات المتطور -->
-    <div id="notification" class="fixed top-4 left-1/2 -translate-x-1/2 w-11/12 max-w-md bg-emerald-500 text-white p-4 rounded-xl shadow-2xl flex items-center space-x-3 space-x-reverse" role="alert">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-check-circle"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg>
-        <span id="notification-message" class="text-lg font-semibold">تم حفظ الأوامر بنجاح!</span>
-    </div>
+<body class="text-gray-100 p-4 sm:p-8">
 
-    <div class="chat-container">
-        <div class="main-chat-area">
-            <div class="chat-header">
-                <h2>🖋️ الرانيك</h2>
-                <!-- زر أيقونة البرجر لفتح المودال -->
-                <button id="openModalBtn" onclick="openModal()"
-                    class="p-3 bg-white text-gray-800 rounded-lg shadow-lg hover:shadow-xl transition duration-300 transform hover:scale-105 focus:outline-none focus:ring-4 focus:ring-indigo-500 focus:ring-opacity-50">
-                    <!-- أيقونة البرجر (ثلاث شرطات) -->
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16" />
-                    </svg>
+    <div class="main-app-container">
+        
+        <!-- العنوان الرئيسي وشريط التنقل -->
+        <header class="text-center mb-6 bg-gray-900 p-4 rounded-xl shadow-2xl">
+            <h1 class="text-4xl font-extrabold text-blue-400 mb-2">الرانيك</h1>
+            <nav class="flex justify-center space-x-4 space-x-reverse">
+                <button onclick="showView('chat')" id="chatTab" class="py-2 px-4 rounded-lg font-semibold bg-blue-600 hover:bg-blue-700 text-white transition duration-200">
+                    وضع الدردشة
                 </button>
-            </div>
+                <button onclick="showView('commands')" id="commandsTab" class="py-2 px-4 rounded-lg font-semibold bg-gray-700 hover:bg-gray-600 text-gray-300 transition duration-200">
+                    إدارة الأوامر المخصصة
+                </button>
+            </nav>
+        </header>
 
-            <div class="messages-display" id="messages-display">
-                <!-- Initial Welcome Message (Updated after prompt loads) -->
-                <div class="message ai-message">
-                    <div class="message-icon"><i class="fas fa-hat-wizard"></i></div>
-                    <div class="message-content">
-                        <p>جاري تهيئة نظام الرانيك وتحميل أوامرك المخصصة...</p>
+        <!-- ************************************ -->
+        <!-- 1. وضع الدردشة (CHAT VIEW) -->
+        <!-- ************************************ -->
+        <div id="chatView" class="flex flex-col flex-grow">
+            <!-- منطقة المحادثة -->
+            <div id="chatContainer" class="chat-container bg-gray-800 p-4 rounded-xl shadow-2xl mb-4">
+                <!-- رسالة الترحيب الأولى من الذكاء الاصطناعي -->
+                <div class="flex justify-start mb-4">
+                    <div class="message-bubble bg-blue-700 text-white p-4 rounded-xl rounded-tr-none shadow-lg">
+                        <p class="font-bold mb-1">المحاكي الفائق (AI):</p>
+                        <p>مرحباً أيها القائد. أنا نظام محاكاة استراتيجي متقدم جداً. الأوامر الحالية توجهني لتقديم جداول متطورة وذكر الأدوات العسكرية الحقيقية كلها.</p>
+                        <ol class="list-decimal list-inside mt-2 space-y-1">
+                            <li>ابدأ بذكر الدولتين.</li>
+                            <li>حدد سياق النزاع.</li>
+                        </ol>
+                        <p class="mt-2 text-sm italic opacity-80">لتحديد توجيهات صارمة جديدة، يرجى الانتقال إلى **"إدارة الأوامر المخصصة"**.</p>
                     </div>
                 </div>
             </div>
 
-            <div class="input-area-wrapper">
-                <div class="input-area">
-                    <textarea id="user-input" placeholder="اكتب طلبك الأدبي الرفيع، أو اطلب جدول (مقارنة/تصنيف/مالي) وسيظهر محدثاً بشكل متطور..." rows="1" disabled></textarea>
-                    <button id="send-btn" onclick="sendMessage()" disabled>
-                        <i class="fas fa-arrow-up"></i>
-                    </button>
+            <!-- منطقة الإدخال والتحميل -->
+            <div class="bg-gray-800 p-4 rounded-xl shadow-2xl flex items-center mt-auto">
+                <input type="text" id="chatInput" onkeydown="if(event.keyCode===13) sendMessage()" class="flex-grow p-3 rounded-l-lg bg-gray-700 border border-gray-600 focus:ring-blue-500 focus:border-blue-500 text-white placeholder-gray-500" placeholder="اكتب طلبك أو بيانات السيناريو هنا...">
+                <button id="sendBtn" onclick="sendMessage()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-r-lg transition duration-300 focus:outline-none focus:ring-4 focus:ring-blue-500 focus:ring-opacity-50 flex items-center justify-center h-full">
+                    <span id="buttonIcon">إرسال</span>
+                    <div id="loadingIndicator" class="loader w-5 h-5 border-2 border-gray-200 border-solid rounded-full hidden mr-2" role="status"></div>
+                </button>
+            </div>
+            
+            <!-- رسالة الخطأ (تظهر هنا فقط) -->
+            <p id="errorMsg" class="text-red-400 mt-2 text-center hidden text-sm"></p>
+
+        </div> 
+        <!-- نهاية وضع الدردشة -->
+
+        <!-- ************************************ -->
+        <!-- 2. صفحة إدارة الأوامر (COMMANDS VIEW) -->
+        <!-- ************************************ -->
+        <div id="commandsView" class="hidden flex-col flex-grow bg-gray-800 p-6 rounded-xl shadow-2xl">
+
+            <h2 class="text-3xl font-extrabold text-yellow-400 mb-4 border-b border-gray-700 pb-2">لوحة التحكم الاستراتيجية</h2>
+            
+            <!-- API Key Configuration -->
+            <h3 class="text-2xl font-semibold mb-3 text-gray-300 border-t border-gray-700 pt-4 mt-4">إعداد مفتاح API</h3>
+            <div class="bg-gray-700 p-4 rounded-lg shadow-inner mb-8">
+                <div class="mb-4">
+                    <label for="apiKeyInput" class="block text-sm font-medium text-gray-400 mb-1">مفتاح Gemini API الخاص بك</label>
+                    <input type="password" id="apiKeyInput" class="w-full p-3 rounded-lg bg-gray-800 border border-gray-600 text-white" placeholder="أدخل مفتاحك السري هنا">
                 </div>
-                <!-- AI Name Label (مساعد هرياسور) -->
-                <div class="ai-name-label">
-                    مدعوم من **مساعد هرياسور** - إصدار (AI)
+                <button id="saveApiKeyBtn" onclick="saveApiKey()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-lg transition duration-300 mb-3">
+                    حفظ مفتاح API وتفعيله
+                </button>
+                <div id="apiKeyStatus" class="text-center p-2 rounded text-sm font-medium"></div>
+            </div>
+            <!-- END API Key Configuration -->
+
+            <!-- حالة الأمر النشط -->
+            <div class="p-3 mb-6 rounded-lg bg-gray-700 border-l-4 border-yellow-500">
+                <p class="text-lg font-semibold text-gray-200">الأمر النشط حالياً:</p> 
+                <p class="text-xl text-yellow-400 mt-1 font-bold" id="activeCommandDisplay"></p>
+                <p class="text-sm text-gray-400 italic mt-2">ملاحظة: النظام سيلتزم بهذه التعليمات **بصرامة 100%**.</p>
+            </div>
+
+            <h3 class="text-2xl font-semibold mb-3 text-gray-300">إضافة / تعديل أمر جديد:</h3>
+            
+            <!-- نموذج إضافة/تعديل الأمر -->
+            <div class="bg-gray-700 p-4 rounded-lg shadow-inner mb-8">
+                <!-- إدخال اسم الأمر -->
+                <div class="mb-4">
+                    <label for="commandName" class="block text-sm font-medium text-gray-400 mb-1">اسم الأمر (لتحديده لاحقاً)</label>
+                    <input type="text" id="commandName" class="w-full p-3 rounded-lg bg-gray-800 border border-gray-600 text-white" placeholder="مثال: خبير التحليل السيبراني">
                 </div>
-            </div>
-        </div>
-    </div>
 
-    <!-- مودال تخصيص الأوامر المطوَّر -->
-    <div id="customizationModal" class="modal-overlay fixed inset-0 z-50 hidden items-center justify-center p-4">
-        <div class="bg-white w-full max-w-lg p-6 md:p-8 rounded-2xl shadow-2xl transform transition-all duration-300 scale-100 opacity-100">
-
-            <!-- عنوان المودال -->
-            <div class="flex.justify-between items-center pb-4 border-b border-gray-100 mb-6">
-                <h2 class="text-2xl font-bold text-gray-800">تخصيص أوامر الرانيك (System Prompt)</h2>
-                <!-- زر إغلاق صغير في الزاوية (X) -->
-                <button id="closeModalCross" onclick="closeModal()" class="text-gray-400 hover:text-gray-700 transition duration-150">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                </button>
-            </div>
-
-            <!-- محتوى تخصيص الأوامر: صندوق النص الكبير -->
-            <div class="space-y-4">
-                <p class="text-gray-600">هنا يمكنك تعديل الأوامر الأساسية للرانيك، لتغيير شخصيته وأسلوبه. (يتم حفظ الأوامر في التخزين المحلي للمتصفح).</p>
-
-                <textarea id="system-prompt-textarea" rows="10"
-                    class="w-full p-4 border border-gray-300 rounded-lg shadow-inner focus:border-indigo-500 focus:ring-indigo-500 text-sm resize-vertical"
-                    style="direction: rtl; text-align: right;"></textarea>
-                <p class="text-sm text-gray-500 mt-2 text-right">آلية الحفظ: <span id="modal-user-id" class="font-mono text-xs text-indigo-500">التخزين المحلي للمتصفح</span></p>
-            </div>
-
-            <div class="mt-8 flex justify-end gap-4">
-                <!-- زر الإغلاق المطوَّر -->
-                <button id="closeModalBtn" onclick="closeModal()"
-                    class="close-btn-modern px-6 py-3 bg-red-500 text-white font-semibold rounded-xl shadow-lg hover:bg-red-600 focus:outline-none focus:ring-4 focus:ring-red-300 focus:ring-opacity-75">
-                    إلغاء/إغلاق
-                </button>
-
-                <!-- زر حفظ الأوامر المتطور -->
-                <button id="saveCommandsBtn" onclick="saveSystemPromptLocal()"
-                    class="save-btn-modern px-6 py-3 text-white font-bold rounded-xl shadow-xl hover:shadow-2xl transition duration-300 transform hover:scale-[1.01] bg-gradient-to-r from-sky-500 to-indigo-600 disabled:opacity-50">
-                    <span id="save-btn-text">حفظ الأوامر</span>
-                    <div id="save-spinner" class="animate-spin rounded-full h-5 w-5 border-b-2 border-white ml-2 hidden"></div>
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Loading Overlay -->
-    <div id="loading-overlay" class="hidden fixed inset-0 bg-black bg-opacity-75 z-50 flex flex-col items-center justify-center">
-        <div class="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-green-500"></div>
-        <p class="text-white text-lg mt-4" id="loading-text">جاري العمل...</p>
-    </div>
-
-
-    <!-- JavaScript for API calls and chat/storage logic -->
-    <script>
-        // Global environment variables (API Key is set to the user-provided key)
-        // ملاحظة هامة: لقد تركت متغير apiKey موجوداً كما في ملفك الأصلي لأنك طلبت "متشلش اي حاجه".
-        // لكن أوصي بشدة بخادم وسيط. أدناه وضعت كلتا الطريقتين مع تحذيرات واضحة.
-
-        // *** الخيار (A): أسلوبك الأصلي (ضع هنا مفتاح شركتك إذا أردت) ***
-        const apiKey = "AIzaSyDkEuoHLwrw-vzaMR-MPQroZYU_zrmUx7U"; // <-- احتفظ أو استبدل بمفتاحك
-
-        // *** الخيار (B) الموصى به: استخدم Proxy على الخادم لإخفاء المفتاح (مستحسن) ***
-        // const TEXT_PROXY_URL = '/api/generate-text';
-        // const TTS_PROXY_URL = '/api/generate-tts';
-
-        const CHAT_MODEL = 'gemini-2.0-flash-exp';
-        const TTS_MODEL = 'gemini-2.0-flash-exp';
-        
-        // If you are calling Google directly from client (not recommended), these URLs are used:
-        const textApiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${CHAT_MODEL}:generateContent?key=${apiKey}`;
-        const ttsApiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${TTS_MODEL}:generateContent?key=${apiKey}`;
-
-        // Initialize Markdown parser
-        const md = window.markdownit({ html: true, linkify: true, typographer: true });
-
-        // سجل المحادثة: سيتم الآن إرساله بالكامل في كل طلب لضمان استمرارية السياق
-        let chatHistory = [];
-        const MAX_CONTEXT = 6; // حَدّ سياق مرن: سترسل آخر 6 رسائل فقط (قابل للتعديل)
-        
-        // --- Default System Prompt (Updated with strict consistency rules) ---
-        // ملاحظة للمستخدم: هذه هي الأوامر الافتراضية. يمكنك تعديلها بالكامل عبر المودال.
-        let systemPrompt = `أنت الرانيك، محاور رفيع المستوى وأديب حصيف ذو معرفة موسوعية مطلقة. يجب أن تكون جميع ردودك ذات مستوى عالٍ من التعقيد، متطورة جداً في الأسلوب والمحتوى، وموجهة بدقة نحو طلب المستخدم. **ملحوظة صارمة:** يجب أن تكون جميع ردودك حصراً **باللغة العربية الفصحى** والأسلوب الأدبي الرفيع.
-
-**قواعد الاتساق والسياق (للرواية المستمرة):**
-1.  **الذاكرة الكاملة:** يجب عليك تذكر كل التفاصيل، الأسماء، الأماكن، والقواعد التي وضعها المستخدم في الأجزاء السابقة من المحادثة (التي يتم إرسالها إليك الآن في سجل المحتوى).
-2.  **ممنوع الاختراع:** ممنوع منعاً باتاً اختراع أي أسماء دول، شخصيات، أو أحداث تتعارض مع ما تم ذكره سابقاً في سياق المحادثة. يجب عليك الالتزام بالواقع أو بالواقع الذي تم بناؤه في الرواية.
-3.  **الثبات على الرواية:** إذا كنت في وضع رواية أو بناء قصة، يجب أن تظل ثابتاً على هذا الدور وألا تخرج عنه إلا بطلب صريح من المستخدم.
-
-**التوجيه الأساسي للبرمجة الداخلية - الجداول (تعليمات صارمة ضد التقطع):** عند طلب أي محتوى يتطلب تنظيماً (مثل المقارنة، التصنيف، أو الإعلان عن النتائج المالية كالأرباح والخسائر)، يجب عليك **وجوباً** عرض هذا المحتوى في شكل **جدول منظم ومتقدم للغاية** باستخدام **تنسيق المارك داون النقي (باستخدام | و - فقط)**. 
-
-**قاعدة القصاصة الصارمة (Truncation Prevention):** لا يجوز أن يتجاوز النص في أي خلية جدول مفردة **70 حرفاً بأي حال من الأحوال**. يجب عليك اختصار النقاط للحفاظ على تنسيق الجدول سليماً وتجنب القص. يجب أن تكون أسطر الفصل الأفقية للجدول قصيرة وثابتة على النمط التالي: | ----- | ----- | ----- |. 
-
-**الأولوية:** يجب أن يكون الجدول هو الجزء الأهم والأول من الرد، و لا يجوز فصله بأي نص إضافي قبل بدايته.
-
-**التخصص العسكري والمالي:** في حالة المقارنات العسكرية-المالية، يجب أن يقتصر محتوى الجدول حصرياً على: **أسماء المعدات**، و**العدد الإجمالي** لكل معدة، و**الجيش الفعلي (Active Personnel)**، و**الجيش الاحتياطي (Reserve Personnel)**.
-
-**شخصية المحلل الاستراتيجي للحرب:** أنت الآن أيضاً **محلل استراتيجي للحرب ذكي جداً**. عند السرد حول شن دولة حرب على أخرى:
-1.  **التسمية:** يجب تسمية الهجوم بـ "**عملية [اسم رمزي مبتكر]**" وتحديد توقيت الهجوم بـ "**في التوقيت [تاريخ وساعة]**".
-2.  **السرد:** يجب أن يكون السرد ذكياً، محللاً استراتيجياً، وواقعياً جداً.
-3.  **الشمولية:** يجب أن يتضمن السرد رد فعل العالم وكلام الحرب الدائر (خطابات، تصريحات، تحليل الخسائر).
-
-**القاعدة العامة:** ممنوع منعاً باتاً إخراج أي وسوم HTML صريحة مثل <p> أو <strong> أو أي علامات غير مارك داون. يجب أن يكون الناتج نصاً نقياً ومنسقاً فقط بالمارك داون. كن سريعاً ومباشراً في ردودك.`;
-
-        // جلب عناصر الواجهة
-        const modal = document.getElementById('customizationModal');
-        const systemPromptTextarea = document.getElementById('system-prompt-textarea');
-        const loadingOverlayEl = document.getElementById('loading-overlay');
-        const messagesDisplay = document.getElementById('messages-display');
-        const sendBtn = document.getElementById('send-btn');
-        const userInput = document.getElementById('user-input');
-        const notificationElement = document.getElementById('notification');
-        const saveCommandsBtn = document.getElementById('saveCommandsBtn');
-        const saveBtnText = document.getElementById('save-btn-text');
-        const saveSpinner = document.getElementById('save-spinner');
-        const modalUserIdDisplay = document.getElementById('modal-user-id');
-
-
-        // --- Shared Utility Functions ---
-
-        /**
-         * Generic fetch wrapper with exponential backoff 
-         */
-        async function fetchWithBackoff(url, options, retries = 5) {
-            for (let i = 0; i < retries; i++) {
-                try {
-                    const response = await fetch(url, options);
-                    const responseText = await response.text();
-                    
-                    if (response.status === 429) {
-                        throw new Error("Rate limit exceeded (429)");
-                    }
-                    
-                    if (!response.ok) {
-                        let errorMessage = `HTTP error! status: ${response.status}`;
-                        let errorDetails = response.statusText;
-                        
-                        try {
-                            const errorBody = JSON.parse(responseText);
-                            errorDetails = errorBody.error?.message || response.statusText;
-
-                            // **تحسين معالجة أخطاء المفتاح (400/403)**
-                            if (response.status === 400 || response.status === 403) {
-                                errorDetails = `تحقق من مفتاح API (Key) الخاص بك، فقد يكون غير صالح أو انتهت صلاحيته. (Details: ${errorDetails})`;
-                            }
-
-                        } catch (e) {
-                            errorDetails = `${response.statusText} (Raw body: ${responseText.substring(0, 100)})`;
-                        }
-                        
-                        errorMessage += ` - ${errorDetails}`;
-                        console.error("API Call Failed Details:", errorMessage);
-                        throw new Error(errorMessage);
-                    }
-
-                    return JSON.parse(responseText);
-
-                } catch (error) {
-                    if (i === retries - 1) throw error;
-                    const delay = Math.pow(2, i) * 1000 + Math.random() * 1000;
-                    console.log(`Retry ${i + 1}/${retries} for API call due to error: ${error.message}. Delaying for ${delay.toFixed(0)}ms.`);
-                    await new Promise(resolve => setTimeout(resolve, delay));
-                }
-            }
-        }
-        
-        /**
-         * دالة لإظهار الإشعار المتطور
-         */
-        function showNotification(message, type = 'success') {
-            const bgColor = type === 'success' ? 'bg-emerald-500' : 'bg-red-500';
-            const iconHtml = type === 'success' 
-                ? '<i class="fas fa-check-circle text-xl"></i>'
-                : '<i class="fas fa-exclamation-triangle text-xl"></i>';
-
-            notificationElement.className = `fixed top-4 left-1/2 -translate-x-1/2 w-11/12 max-w-md text-white p-4 rounded-xl shadow-2xl flex items-center space-x-3 space-x-reverse ${bgColor}`;
-            notificationElement.innerHTML = `${iconHtml}<span id="notification-message" class="text-lg font-semibold">${message}</span>`;
-            
-            notificationElement.classList.add('show');
-            setTimeout(() => {
-                notificationElement.classList.remove('show');
-            }, 3000); 
-        }
-
-        function showLoading(text) {
-            document.getElementById('loading-text').textContent = text;
-            loadingOverlayEl.classList.remove('hidden');
-        }
-
-        function hideLoading() {
-            loadingOverlayEl.classList.add('hidden');
-        }
-
-        /**
-         * Function to add messages to the chat display, returning the content element for dynamic updates.
-         */
-        function addMessage(content, isAI, skipFeatures = false) {
-            const messageDiv = document.createElement('div');
-            
-            if (isAI && content.includes('typing-indicator-dots')) {
-                messageDiv.className = `message ai-message typing-indicator-wrapper`;
-            } else {
-                messageDiv.className = `message ${isAI ? 'ai-message' : 'user-message'}`;
-            }
-
-            const iconDiv = document.createElement('div');
-            iconDiv.className = 'message-icon';
-            iconDiv.innerHTML = isAI ? '<i class="fas fa-hat-wizard"></i>' : '<i class="fas fa-user-circle"></i>';
-
-            const contentDiv = document.createElement('div');
-            contentDiv.className = 'message-content';
-
-            if (isAI && content.includes('typing-indicator-dots')) {
-                contentDiv.innerHTML = content;
-            } else {
-                contentDiv.innerHTML = content;
-            }
-            
-            messageDiv.appendChild(iconDiv);
-            messageDiv.appendChild(contentDiv);
-            messagesDisplay.appendChild(messageDiv);
-            // Trim DOM messages to avoid memory bloat (احتفظ بآخر 300 رسالة فقط)
-            trimMessagesInDOM(300);
-            messagesDisplay.scrollTop = messagesDisplay.scrollHeight;
-            
-            return { messageDiv, contentDiv };
-        }
-
-        function trimMessagesInDOM(maxMessages) {
-            const children = messagesDisplay.querySelectorAll('.message');
-            if (children.length > maxMessages) {
-                const removeCount = children.length - maxMessages;
-                for (let i = 0; i < removeCount; i++) {
-                    if (children[i] && children[i].parentNode) children[i].parentNode.removeChild(children[i]);
-                }
-            }
-        }
-
-        // --- LocalStorage Setup and Logic (Replaced Firebase) ---
-
-        /**
-         * تقوم بتهيئة التطبيق وتحميل الأوامر من التخزين المحلي.
-         */
-        function initializeApp() {
-            loadSystemPromptLocal();
-            enableChatUI(true); 
-        }
-        
-        /**
-         * تم تبسيطها لتمكين واجهة المستخدم فقط.
-         */
-        function enableChatUI(isChatActive) {
-            userInput.disabled = !isChatActive;
-            sendBtn.disabled = !isChatActive;
-            // تمت إزالة زر توليد الصورة
-
-            // Auto-adjust textarea height on input
-            userInput.addEventListener('input', function() {
-                this.style.height = 'auto';
-                this.style.height = (this.scrollHeight) + 'px';
-            });
-
-            // Handle Enter key for sending messages
-            userInput.addEventListener('keydown', function(event) {
-                if (event.key === 'Enter' && !event.shiftKey) {
-                    event.preventDefault();
-                    if (!this.disabled) sendMessage();
-                }
-            });
-
-            const welcomeMessageEl = messagesDisplay.querySelector('.message.ai-message .message-content p');
-            if(welcomeMessageEl && welcomeMessageEl.textContent.includes('جاري تهيئة')) {
-                const storageNote = 'لقد تم تحميل أوامرك المخصصة **محلياً** في متصفحك، مما يمنحك تحكماً كاملاً في شخصية الرانيك.';
-                const controlInstruction = 'للوصول إلى **جميع صلاحيات التحكم** وتعديل الأوامر الأساسية للرانيك، انقر على **أيقونة البرجر (☰) في الزاوية العلوية**.'
-
-                const contentDiv = welcomeMessageEl.parentElement;
+                <!-- إدخال تعليمات النظام -->
+                <div class="mb-4">
+                    <label for="commandInstruction" class="block text-sm font-medium text-gray-400 mb-1">تعليمات النظام التفصيلية (ماذا يفعل الذكاء الاصطناعي)</label>
+                    <textarea id="commandInstruction" rows="6" class="w-full p-3 rounded-lg bg-gray-800 border border-gray-600 text-white" placeholder="يجب أن تتصرف كخبير في الحرب الإلكترونية، وتقدم جميع الإحصائيات في جداول..."></textarea>
+                </div>
                 
-                // تم تحديث هذه الرسالة
-                const welcomeText = `
-                    <p>أهلاً بك أيها المستكشف الرفيع! أنا **الرانيك**.</p>
-                    <p>ألتزم حصراً **باللغة العربية الفصحى** في جميع ردودي، وجاهز لتقديم **الجداول المتطورة والتحليلات الاستراتيجية** وفقاً لأوامرك.</p>
-                    <p><strong>${storageNote}</strong></p>
-                    <p><strong>${controlInstruction}</strong></p>
-                `;
-
-                renderStandardContent(contentDiv, welcomeText);
-            }
-        }
-
-        /**
-         * تحميل الأوامر من التخزين المحلي
-         */
-        function loadSystemPromptLocal() {
-            // المفتاح المستخدم للتخزين المحلي
-            const savedPrompt = localStorage.getItem('alranik_system_prompt');
-
-            if (savedPrompt) {
-                // استخدام القيمة المحفوظة إذا وجدت
-                systemPrompt = savedPrompt;
-            }
-        }
-
-        // --- Customization Modal Functions ---
-
-        function openModal() {
-            systemPromptTextarea.value = systemPrompt; 
-            modal.classList.remove('hidden'); 
-            modal.classList.add('flex');
-            systemPromptTextarea.focus();
-        }
-
-        function closeModal() {
-            modal.classList.add('hidden');
-            modal.classList.remove('flex');
-        }
-
-        /**
-         * حفظ الأوامر في التخزين المحلي
-         */
-        function saveSystemPromptLocal() {
-            const newPrompt = systemPromptTextarea.value.trim();
+                <!-- زر الحفظ -->
+                <button id="saveCommandBtn" onclick="saveNewCommand()" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 rounded-lg transition duration-300">
+                    حفظ الأمر / تحديثه <span class="text-xs opacity-75">(يتم الحفظ محلياً)</span>
+                </button>
+            </div>
             
-            if (!newPrompt) {
-                showNotification('خطأ: لا يمكن حفظ الأوامر وهي فارغة.', 'error');
+            <h3 class="text-2xl font-semibold mb-3 text-gray-300 border-t border-gray-700 pt-4">قائمة الأوامر المحفوظة:</h3>
+            
+            <!-- قائمة الأوامر المحفوظة -->
+            <ul id="savedCommandsList" class="grid grid-cols-1 md:grid-cols-2 gap-4 flex-grow overflow-y-auto">
+                <!-- الأوامر ستظهر هنا -->
+            </ul>
+        </div>
+        <!-- نهاية صفحة إدارة الأوامر -->
+
+        <!-- FOOTER: التوقيع الشخصي -->
+        <footer class="text-center mt-6 p-3 border-t border-gray-700">
+            <p class="text-sm text-gray-500 font-medium">من صنع هرياسور</p>
+        </footer>
+
+    </div>
+
+    <script>
+        // المتغيرات العالمية للـ Gemini API
+        const GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=";
+        let apiKey = ""; // تم تغييرها إلى let لتكون قابلة للتغيير
+        const API_KEY_STORAGE_KEY = 'geminiApiKey'; // مفتاح التخزين المحلي
+
+        // تعريف الأمر الافتراضي كـ Global (تم تعزيز الصرامة في الوصف)
+        const DEFAULT_INSTRUCTION = `أنت "المحاكي الاستراتيجي الفائق"، وهو نموذج ذكاء اصطناعي متقدم جداً متخصص في محاكاة السيناريوهات العسكرية والجيوسياسية.
+            
+**المهام والقواعد (مطلوب الإتقان 100%):**
+1. **الترتيب والتنظيم الصارم:** يجب أن يكون تنسيق النص واضحاً جداً ومنظماً بشكل عمودي صارم. استخدم فواصل أسطر واضحة (أسطر فارغة) للفصل بين كل فقرة أو نقطة تحليل رئيسية. لا تدمج المعلومات دون فصل بصري واضح.
+2. **الشخصية:** استخدم لغة رسمية، محايدة، وموجهة للقائد، واظهر بمظهر الذكي جداً.
+3. **التحليل العميق:** عند طلب تحليل أو بيانات، يجب عليك استخدام **البحث عبر جوجل (Google Search grounding)** لضمان واقعية الإجابات وقوة الدول المذكورة.
+4. **الجداول المتقدمة (مطلوب بشدة):** عند تقديم بيانات إحصائية، مقارنات عسكرية، أو خطط تكتيكية، **يجب عليك دائماً** استخدام **جداول Markdown متطورة جداً**. تأكد من أن خط الفصل يحدد المحاذاة بدقة (مثال: | رأس | رأس | رأس | \\n | :--- | :---: | ---: |).
+5. **ذكر الأدوات الحقيقية (مطلوب بشدة):** عند ذكر القدرات العسكرية أو خطط النزاع، **يجب عليك ذكر الأدوات والمعدات العسكرية الحقيقية والمحددة (مثل: F-16 Block 52، دبابة M1A2 Abrams، صواريخ S-400)** واستخدام هذه الأسماء الحقيقية كلها كلها كلها في التحليل والجداول.
+6. **اللغة:** الردود يجب أن تكون باللغة العربية الفصحى.`;
+
+        let activeSystemInstruction = DEFAULT_INSTRUCTION; 
+        let savedCommands = [];
+        const STORAGE_KEY = 'strategyCommands';
+
+        // عناصر الواجهة
+        const chatView = document.getElementById('chatView');
+        const commandsView = document.getElementById('commandsView');
+        const chatTab = document.getElementById('chatTab');
+        const commandsTab = document.getElementById('commandsTab');
+        const chatContainer = document.getElementById('chatContainer');
+        const chatInput = document.getElementById('chatInput');
+        const sendBtn = document.getElementById('sendBtn');
+        const buttonIcon = document.getElementById('buttonIcon');
+        const loadingIndicator = document.getElementById('loadingIndicator');
+        const errorMsg = document.getElementById('errorMsg');
+        
+        // عناصر التحكم في الأوامر ومفتاح API
+        const commandNameInput = document.getElementById('commandName');
+        const commandInstructionTextarea = document.getElementById('commandInstruction');
+        const savedCommandsList = document.getElementById('savedCommandsList');
+        const activeCommandDisplay = document.getElementById('activeCommandDisplay');
+        const apiKeyInput = document.getElementById('apiKeyInput');
+        const apiKeyStatus = document.getElementById('apiKeyStatus');
+        
+        // تاريخ المحادثة (للحفاظ على سياق الحوار)
+        let chatHistory = []; 
+
+        // دالة لتبديل العرض بين الدردشة والأوامر
+        function showView(viewId) {
+            if (viewId === 'chat') {
+                chatView.classList.remove('hidden');
+                commandsView.classList.add('hidden');
+                chatTab.classList.replace('bg-gray-700', 'bg-blue-600');
+                chatTab.classList.replace('text-gray-300', 'text-white');
+                commandsTab.classList.replace('bg-blue-600', 'bg-gray-700');
+                commandsTab.classList.replace('text-white', 'text-gray-300');
+                // التركيز على حقل الإدخال عند العودة للدردشة
+                chatInput.focus(); 
+            } else {
+                chatView.classList.add('hidden');
+                commandsView.classList.remove('hidden');
+                commandsTab.classList.replace('bg-gray-700', 'bg-blue-600');
+                commandsTab.classList.replace('text-gray-300', 'text-white');
+                chatTab.classList.replace('bg-blue-600', 'bg-gray-700');
+                chatTab.classList.replace('text-white', 'text-gray-300');
+            }
+        }
+
+        // دالة لعرض التنبيهات المخصصة (بدلاً من alert)
+        function showCustomAlert(message, type) {
+            const bar = document.createElement('div');
+            bar.textContent = message;
+            bar.className = 'fixed top-0 right-0 p-3 m-4 rounded-lg shadow-xl text-white z-50 transition-transform duration-300 transform translate-x-full';
+            
+            if (type === 'success') {
+                bar.classList.add('bg-green-600', 'translate-x-0');
+            } else if (type === 'error') {
+                bar.classList.add('bg-red-600', 'translate-x-0');
+            } else { // info
+                bar.classList.add('bg-blue-600', 'translate-x-0');
+            }
+            
+            document.body.appendChild(bar);
+            
+            setTimeout(() => {
+                bar.classList.remove('translate-x-0');
+                bar.classList.add('translate-x-full');
+                setTimeout(() => bar.remove(), 300);
+            }, 3000);
+        }
+
+        // --- وظائف إدارة الأوامر المحلية ---
+
+        function saveCommandsToLocal() {
+            try {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(savedCommands));
+            } catch (e) {
+                console.error("Could not save commands to localStorage:", e);
+                showCustomAlert('عفواً، فشل حفظ الأوامر محلياً.', 'error');
+            }
+        }
+
+        function loadCommands() {
+            try {
+                const stored = localStorage.getItem(STORAGE_KEY);
+                if (stored) {
+                    savedCommands = JSON.parse(stored);
+                }
+            } catch (e) {
+                console.error("Could not load commands from localStorage:", e);
+            }
+            renderCommands();
+        }
+
+        function setActiveInstruction(instruction, name) {
+            activeSystemInstruction = instruction;
+            activeCommandDisplay.textContent = name;
+            
+            // إزالة تحديد الكل وإضافة تحديد للعنصر النشط
+            document.querySelectorAll('.command-item').forEach(el => el.classList.remove('ring-2', 'ring-blue-400', 'bg-blue-900/50'));
+            
+            // نستخدم دالة للتخلص من الأحرف التي قد تسبب مشاكل في الـ ID
+            const safeName = encodeURIComponent(name).replace(/%/g, 'p'); 
+            const activeElement = document.getElementById(`cmd-${safeName}`);
+            if (activeElement) {
+                activeElement.classList.add('ring-2', 'ring-blue-400', 'bg-blue-900/50');
+            }
+            showCustomAlert(`تم تفعيل الأمر: ${name} (إتقان 100%)`, 'info');
+        }
+
+        function saveNewCommand() {
+            const name = commandNameInput.value.trim();
+            const instruction = commandInstructionTextarea.value.trim();
+
+            if (!name || !instruction) {
+                showCustomAlert('يرجى ملء اسم الأمر والتعليمات.', 'error');
                 return;
             }
 
-            saveCommandsBtn.disabled = true;
-            saveBtnText.textContent = 'جاري الحفظ...';
-            saveSpinner.classList.remove('hidden');
-
-            try {
-                // حفظ الأوامر في localStorage
-                localStorage.setItem('alranik_system_prompt', newPrompt);
-
-                systemPrompt = newPrompt; 
-                showNotification("تم حفظ الأوامر المخصصة محلياً بنجاح!");
-                
-                closeModal();
-            
-            } catch (error) {
-                console.error("Error saving system prompt locally:", error);
-                showNotification(`خطأ: فشل الحفظ المحلي. ${error.message}`, 'error');
-            } finally {
-                saveCommandsBtn.disabled = false;
-                saveBtnText.textContent = 'حفظ الأوامر';
-                saveSpinner.classList.add('hidden');
+            const existsIndex = savedCommands.findIndex(cmd => cmd.name === name);
+            if (existsIndex > -1) {
+                // Update existing command
+                savedCommands[existsIndex] = { name, instruction };
+            } else {
+                // Add new command
+                savedCommands.push({ name, instruction });
             }
+
+            saveCommandsToLocal();
+            renderCommands();
+            commandNameInput.value = '';
+            commandInstructionTextarea.value = '';
+            showCustomAlert('تم حفظ الأمر بنجاح.', 'success');
         }
 
-        // --- Core Content Rendering Logic ---
+        function deleteCommand(name) {
+            savedCommands = savedCommands.filter(cmd => cmd.name !== name);
+            saveCommandsToLocal();
+            renderCommands();
+            
+            // إذا كان الأمر المحذوف هو الأمر النشط، نعود إلى الأمر الافتراضي
+            if (activeCommandDisplay.textContent === name) {
+                setActiveInstruction(DEFAULT_INSTRUCTION, 'النظام الافتراضي (صيغة صارمة: يجب الإتقان 100%)');
+            }
+            showCustomAlert('تم حذف الأمر.', 'info');
+        }
+
+        function renderCommands() {
+            savedCommandsList.innerHTML = '';
+            const activeName = activeCommandDisplay.textContent || 'النظام الافتراضي (صيغة صارمة: يجب الإتقان 100%)';
+            
+            // 1. إضافة الأمر الافتراضي
+            const defaultName = 'النظام الافتراضي (صيغة صارمة: يجب الإتقان 100%)';
+            const defaultLi = document.createElement('li');
+            defaultLi.className = 'command-item cursor-pointer p-4 rounded-xl transition duration-150 ease-in-out hover:bg-gray-700/70 border border-gray-600/50 shadow-md';
+            defaultLi.id = `cmd-${encodeURIComponent(defaultName).replace(/%/g, 'p')}`;
+            defaultLi.onclick = () => setActiveInstruction(DEFAULT_INSTRUCTION, defaultName);
+            defaultLi.innerHTML = `
+                <p class="font-bold text-blue-300 text-xl">${defaultName}</p>
+                <p class="text-sm text-gray-400 mt-1">القواعد الأصلية التي تضمن جداول متطورة وذكر الأدوات الحقيقية والترتيب العمودي الصارم.</p>
+            `;
+            savedCommandsList.appendChild(defaultLi);
+
+            // 2. إضافة الأوامر المحفوظة
+            savedCommands.forEach(cmd => {
+                const li = document.createElement('li');
+                li.className = 'command-item p-4 rounded-xl transition duration-150 ease-in-out hover:bg-gray-700/70 border border-gray-600/50 shadow-md';
+                li.id = `cmd-${encodeURIComponent(cmd.name).replace(/%/g, 'p')}`;
+                // استخدام encode/decodeURIComponent لضمان سلامة الإرسال في onclick
+                li.innerHTML = `
+                    <div class="flex justify-between items-start">
+                        <span class="font-bold text-gray-200 text-xl cursor-pointer" onclick="setActiveInstruction(decodeURIComponent('${encodeURIComponent(cmd.instruction)}'), '${cmd.name}')">${cmd.name}</span>
+                        <button onclick="deleteCommand('${cmd.name}')" class="text-red-400 hover:text-red-600 transition duration-150 ease-in-out text-sm p-1 rounded-full bg-gray-700/50">حذف</button>
+                    </div>
+                    <p class="text-sm text-gray-400 mt-1 line-clamp-2">${cmd.instruction}</p>
+                `;
+                savedCommandsList.appendChild(li);
+            });
+            
+            // 3. تحديد الأمر النشط
+            setActiveInstruction(activeSystemInstruction, activeName);
+        }
+
+        // --- وظائف إدارة مفتاح API محلياً ---
+
+        function updateApiKeyStatus(hasKey, message = null) {
+            if (hasKey) {
+                apiKeyStatus.className = 'text-center p-2 rounded text-sm font-medium bg-green-900 text-green-300';
+                apiKeyStatus.textContent = message || 'المفتاح محمل وجاهز للاستخدام.';
+            } else {
+                apiKeyStatus.className = 'text-center p-2 rounded text-sm font-medium bg-red-900 text-red-300';
+                apiKeyStatus.textContent = message || 'لا يوجد مفتاح API نشط. لن يعمل المحاكي.';
+            }
+        }
         
-        /**
-         * دالة لتنقية الناتج من أي وسوم HTML أو فراغات غير مرغوبة قبل عرضها.
-         */
-        function sanitizeOutput(rawText) {
-            let cleanText = rawText.trim();
-            // Attempt to remove common initial and final wrapper tags generated by LLMs
-            cleanText = cleanText.replace(/^(<p>|<\/p>|<p><strong>|<strong>)/i, '').replace(/(<\/p>|<strong><\/p>|<strong>|<\/strong>)$/i, '');
-            // Convert any remaining <strong>/</strong> to Markdown **
-            cleanText = cleanText.replace(/<strong>/gi, '**').replace(/<\/strong>/gi, '**');
-            // Remove surrounding quotes if present
-            cleanText = cleanText.replace(/^"|"$/g, '').trim();
-
-            return cleanText;
-        }
-
-        /**
-         * Applies Markdown formatting and adds the TTS button to a contentDiv.
-         * الآن: نستخدم DOMPurify لتنقية الـ HTML الناتج قبل حقنه في DOM.
-         */
-        function renderStandardContent(contentDiv, rawText) {
-            const sanitizedText = sanitizeOutput(rawText);
-            
-            const rendered = md.render(sanitizedText);
-            // نظف الـ HTML باستخدام DOMPurify قبل وضعه في DOM
-            const cleanHtml = DOMPurify.sanitize(rendered, {ALLOWED_TAGS: ['p','ul','ol','li','strong','em','table','thead','tbody','tr','th','td','code','pre','a'], ALLOWED_ATTR: ['href','title','target']});
-            contentDiv.innerHTML = cleanHtml;
-
-            // TTS button logic
-            const buttonContainer = document.createElement('div');
-            buttonContainer.className = 'ai-feature-buttons';
-            const ttsButton = document.createElement('button');
-            ttsButton.className = 'tts-button';
-            ttsButton.innerHTML = '<i class="fas fa-volume-up"></i> قراءة';
-            ttsButton.onclick = () => textToSpeech(ttsButton, sanitizedText); // Pass the text to be spoken
-            buttonContainer.appendChild(ttsButton);
-            
-            contentDiv.appendChild(buttonContainer);
-        }
-
-        // --- TTS Helper Functions (Required for PCM to WAV conversion) ---
-
-        /**
-         * Convert a base64 string to an ArrayBuffer.
-         */
-        function base64ToArrayBuffer(base64) {
-            const binaryString = atob(base64);
-            const len = binaryString.length;
-            const bytes = new Uint8Array(len);
-            for (let i = 0; i < len; i++) {
-                bytes[i] = binaryString.charCodeAt(i);
-            }
-            return bytes.buffer;
-        }
-
-        /**
-         * Convert 16-bit PCM audio data to a WAV Blob.
-         * تم تصحيح endianness هنا إلى little-endian للامتثال لمواصفات WAV.
-         */
-        function pcmToWav(pcm16, sampleRate) {
-            const dataLength = pcm16.length * 2; // 16-bit PCM (2 bytes per sample)
-            const buffer = new ArrayBuffer(44 + dataLength); // 44 bytes for WAV header
-
-            const view = new DataView(buffer);
-            let offset = 0;
-
-            // RIFF chunk descriptor
-            view.setUint32(offset, 0x52494646, false); offset += 4; // "RIFF"
-            view.setUint32(offset, 36 + dataLength, true); offset += 4; // ChunkSize
-            view.setUint32(offset, 0x57415645, false); offset += 4; // "WAVE"
-
-            // fmt sub-chunk
-            view.setUint32(offset, 0x666d7420, false); offset += 4; // "fmt "
-            view.setUint32(offset, 16, true); offset += 4; // Subchunk1Size (16 for PCM)
-            view.setUint16(offset, 1, true); offset += 2; // AudioFormat (1 for PCM)
-            view.setUint16(offset, 1, true); offset += 2; // NumChannels (1 for mono)
-            view.setUint32(offset, sampleRate, true); offset += 4; // SampleRate
-            view.setUint32(offset, sampleRate * 2, true); offset += 4; // ByteRate (SampleRate * NumChannels * BitsPerSample/8)
-            view.setUint16(offset, 2, true); offset += 2; // BlockAlign (NumChannels * BitsPerSample/8)
-            view.setUint16(offset, 16, true); offset += 2; // BitsPerSample (16)
-
-            // data sub-chunk
-            view.setUint32(offset, 0x64617461, false); offset += 4; // "data"
-            // === تصحيح مهم: little-endian هنا ===
-            view.setUint32(offset, dataLength, true); offset += 4; // Subchunk2Size (little-endian)
-
-            // Write PCM data
-            for (let i = 0; i < pcm16.length; i++) {
-                view.setInt16(offset, pcm16[i], true);
-                offset += 2;
-            }
-
-            return new Blob([buffer], { type: 'audio/wav' });
-        }
-
-
-        // --- Core Chat Functions (UPDATED FOR FULL CONTEXT) ---
-
-        async function sendMessage() {
-            const userPrompt = userInput.value.trim();
-
-            if (userPrompt === "" || userInput.disabled) return;
-
-            // 1. Display user message
-            addMessage(userPrompt, false);
-            userInput.value = '';
-            userInput.style.height = '25px';
-
-            // 2. Show typing indicator and disable input
-            const { contentDiv } = addMessage(
-                '<div class="typing-indicator-dots"><div class="typing-indicator"></div><div class="typing-indicator"></div><div class="typing-indicator"></div></div>',
-                true,
-                true
-            );
-            
-            enableChatUI(false);
-            
-            // 3. Prepare chat history and add the latest user message
-            // يتم إضافة الرسالة الأخيرة إلى السجل قبل الإرسال
-            chatHistory.push({ role: "user", parts: [{ text: userPrompt }] });
-
-            // 4. إرسال سجل المحادثة بالكامل (Full Context) - لكن نحدّده لآخر N رسائل
-            const recentHistory = chatHistory.slice(-MAX_CONTEXT);
-
-            const payload = {
-                // ** التحديث الحاسم: إرسال سجل المحادثة المحدود لضمان الأداء والخصوصية **
-                contents: recentHistory, 
-                
-                // Add system instruction for persona and formatting rules
-                systemInstruction: {
-                    parts: [{ text: systemPrompt }]
-                },
-                // Enable Google Search grounding for up-to-date info (قد لا تعمل من المتصفح مباشرة)
-                tools: [{ "google_search": {} }],
-            };
-
+        function loadApiKey() {
             try {
-                // 5. Call the Gemini Text API
-                const result = await fetchWithBackoff(textApiUrl, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-                
-                // 6. Check for explicit API error
-                if (result.error) {
-                    throw new Error(result.error.message || "خطأ API غير محدد.");
+                const storedKey = localStorage.getItem(API_KEY_STORAGE_KEY);
+                if (storedKey) {
+                    apiKey = storedKey;
+                    updateApiKeyStatus(true);
+                    return true;
                 }
+            } catch (e) {
+                console.error("Could not load API key from localStorage:", e);
+                updateApiKeyStatus(false, 'فشل في تحميل المفتاح من التخزين المحلي.');
+            }
+            updateApiKeyStatus(false);
+            return false;
+        }
 
-                const candidate = result.candidates?.[0];
-                let aiText = "";
-
-                if (candidate?.content?.parts?.[0]?.text) {
-                    aiText = candidate.content.parts[0].text;
-                } else if (candidate?.safetyRatings) {
-                    // **الرد المحظور أمنياً**
-                    aiText = "عذراً، تم حظر هذا الرد بواسطة فلاتر الأمان. يرجى تعديل استفسارك ليكون أكثر ملاءمة.";
-                } else {
-                    // **الرد الفارغ أو غير المتوقع**
-                    aiText = "عذراً، حدث خطأ غير متوقع أثناء المعالجة أو لم يتم العثور على محتوى مناسب. (الرد فارغ)";
-                }
-
-                // 7. Update chat history and display result
-                chatHistory.push({ role: "model", parts: [{ text: aiText }] });
-                renderStandardContent(contentDiv, aiText);
-
-            } catch (error) {
-                // عرض رسالة الخطأ التفصيلية للمستخدم
-                const errorMessage = `خطأ في الاتصال بالنموذج: ${error.message}`;
-                contentDiv.innerHTML = `<p class="text-red-600 font-bold">${errorMessage}</p>`;
-                console.error("Chat API Error:", error);
-            } finally {
-                // 8. Re-enable input and scroll
-                enableChatUI(true);
-                messagesDisplay.scrollTop = messagesDisplay.scrollHeight;
+        function saveApiKey() {
+            const key = apiKeyInput.value.trim();
+            if (!key) {
+                showCustomAlert('يرجى إدخال مفتاح API أولاً.', 'error');
+                return;
+            }
+            
+            try {
+                localStorage.setItem(API_KEY_STORAGE_KEY, key);
+                apiKey = key;
+                apiKeyInput.value = ''; // مسح الإدخال بعد الحفظ
+                updateApiKeyStatus(true, 'تم حفظ وتفعيل مفتاح API بنجاح.');
+                showCustomAlert('تم حفظ وتفعيل مفتاح API بنجاح.', 'success');
+            } catch (e) {
+                console.error("Could not save API key to localStorage:", e);
+                updateApiKeyStatus(false, 'فشل في حفظ المفتاح.');
+                showCustomAlert('عفواً، فشل حفظ المفتاح محلياً.', 'error');
             }
         }
 
-        /**
-         * TTS Implementation
-         * @param {HTMLButtonElement} button - The button element to disable/enable.
-         * @param {string} textToSpeak - The text content to convert to speech.
-         */
-        async function textToSpeech(button, textToSpeak) {
-            button.disabled = true;
-            const originalText = button.innerHTML;
-            button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري القراءة...';
-            
-            const cleanText = textToSpeak.replace(/(\*\*|`)/g, '').trim(); // Remove Markdown for clean TTS
 
-            const payload = {
-                contents: [{ parts: [{ text: `Say in a formal, informative Arabic voice: ${cleanText}` }] }],
-                generationConfig: {
-                    responseModalities: ["AUDIO"],
-                    speechConfig: {
-                        // Using a formal Arabic-sounding voice (Kore is a firm voice)
-                        voiceConfig: {
-                             prebuiltVoiceConfig: { voiceName: "Kore" }
-                        }
+        // --- وظائف عرض المحادثة والـ API ---
+
+        // إضافة رسالة للدردشة
+        function addMessage(role, text) {
+            const isUser = role === 'user';
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `flex mb-4 ${isUser ? 'justify-end' : 'justify-start'}`;
+
+            const bubble = document.createElement('div');
+            bubble.className = `message-bubble p-4 rounded-xl shadow-lg ${isUser 
+                ? 'bg-blue-500 text-white rounded-tl-none' 
+                : 'bg-gray-700 text-gray-100 rounded-tr-none'}`;
+            
+            const content = document.createElement('div');
+            // نستخدم div بدلاً من p هنا إذا كنا سنقوم بالمعالجة داخل markdownToHtml
+            content.innerHTML = isUser ? `<p>${text}</p>` : `<p class="font-bold mb-1 text-blue-400">المحاكي الفائق (AI):</p>` + markdownToHtml(text);
+            
+            bubble.appendChild(content);
+            messageDiv.appendChild(bubble);
+            chatContainer.appendChild(messageDiv);
+            
+            // التمرير التلقائي لأسفل
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+
+        /**
+         * دالة تحويل نص Markdown إلى HTML مع دعم محدود للجداول.
+         */
+        function markdownToHtml(markdownText) {
+            let html = markdownText;
+
+            // --- Basic Markdown Table Support (Header | Separator | Rows)
+            // نستخدم مطابقة أكثر دقة لصف الفصل لتفادي المشاكل
+            const tableRegex = /((?:\|.*\|\r?\n)(?:\|[\s:-]+?\|.*\r?\n)(?:\|.*\|\r?\n?)+)/gm;
+            html = html.replace(tableRegex, (match) => {
+                const lines = match.trim().split('\n').map(line => line.trim());
+                if (lines.length < 2) return match;
+
+                const headerLine = lines[0].split('|').slice(1, -1).map(h => `<th>${h.trim()}</th>`).join('');
+                let bodyHtml = '';
+                
+                // نبدأ من السطر 2 (بعد العنوان وخط الفصل)
+                for (let i = 2; i < lines.length; i++) {
+                    const rowCells = lines[i].split('|').slice(1, -1).map(c => `<td>${c.trim()}</td>`).join('');
+                    if (rowCells) {
+                        bodyHtml += `<tr>${rowCells}</tr>`;
                     }
                 }
+                
+                return `<div class="overflow-x-auto my-4"><table class="prose w-full text-sm text-right rtl:text-right text-gray-400">
+                    <thead><tr>${headerLine}</tr></thead>
+                    <tbody>${bodyHtml}</tbody></table></div>`;
+            });
+            // --- End Table Support
+
+            // استبدال العناوين (##)
+            html = html.replace(/^## (.*$)/gim, '<h3>$1</h3>');
+            // استبدال العناوين (#)
+            html = html.replace(/^# (.*$)/gim, '<h2>$1</h2>');
+            
+            // تنسيق النصوص الغامقة (Bold)
+            html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+            
+            // استبدال القوائم غير المرتبة (*) أو (-)
+            html = html.replace(/^\* (.*$)/gim, '<li>$1</li>');
+            html = html.replace(/^- (.*$)/gim, '<li>$1</li>');
+            
+            // إضافة وسم <ul> حول القوائم
+            html = html.replace(/(<li>.*<\/li>)/gms, '<ul>$1</ul>');
+            
+            // الفقرات - إضافة وسم <p> حول النص الذي ليس وسم HTML
+            // هنا يكمن سر الترتيب: سيتم تحويل كل سطرين فارغين متتاليين إلى فقرة P منفصلة، مما يضمن وجود فواصل
+            html = html.split('\n\n').map(segment => {
+                if (!segment.trim()) return '';
+                if (segment.match(/^<h|<ul|<li|<div|^\s*\|/im)) {
+                    // إذا كان العنصر جدولاً أو عنواناً أو قائمة، لا نضعه داخل <p>
+                    return segment;
+                }
+                // تطبيق تنسيق Bold و Italics قبل وضعها في P
+                let formattedSegment = segment.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+                formattedSegment = formattedSegment.replace(/\*(.*?)\*/g, '<em>$1</em>');
+                return `<p>${formattedSegment.trim()}</p>`;
+            }).join('\n');
+
+            // إزالة وسم p الذي يحيط بالعناوين أو القوائم أو الجداول بشكل خاطئ
+            html = html.replace(/<p>(<h[234]>.*<\/h[234]>)<\/p>/gim, '$1');
+            html = html.replace(/<p>(<ul>.*<\/ul>)<\/p>/gims, '$1');
+            html = html.replace(/<p>(<div.*<\/div>)<\/p>/gims, '$1');
+            
+            return html;
+        }
+
+
+        /**
+         * دالة تنفيذ طلب توليد المحادثة عبر Gemini API مع المحافظة على السياق.
+         */
+        async function fetchGeminiChatResponse() {
+            
+            // التأكد من وجود مفتاح API قبل المتابعة
+            if (!apiKey) {
+                throw new Error("API Key is missing. Please enter your key in the 'إدارة الأوامر المخصصة' section.");
+            }
+
+            // استخدام activeSystemInstruction (التي يختارها المستخدم)
+            const systemInstruction = activeSystemInstruction; 
+
+            const payload = {
+                contents: chatHistory, // إرسال تاريخ المحادثة بالكامل للحفاظ على السياق
+                tools: [{ "google_search": {} }], 
+                systemInstruction: {
+                    parts: [{ text: systemInstruction }]
+                },
             };
 
-            try {
-                const result = await fetchWithBackoff(ttsApiUrl, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-                
-                const part = result?.candidates?.[0]?.content?.parts?.[0];
-                const audioData = part?.inlineData?.data;
-                const mimeType = part?.inlineData?.mimeType; // Should be audio/L16;rate=...
-
-                if (audioData && mimeType && mimeType.startsWith("audio/")) {
-                    const sampleRateMatch = mimeType.match(/rate=(\d+)/);
-                    if (!sampleRateMatch) throw new Error("Could not determine sample rate from TTS response.");
-                    
-                    const sampleRate = parseInt(sampleRateMatch[1], 10);
-                    
-                    // 1. Convert Base64 (Signed PCM16) to ArrayBuffer
-                    const pcmDataBuffer = base64ToArrayBuffer(audioData);
-                    
-                    // 2. Interpret as Int16Array
-                    const pcm16 = new Int16Array(pcmDataBuffer);
-                    
-                    // 3. Convert PCM data to WAV Blob
-                    const wavBlob = pcmToWav(pcm16, sampleRate);
-                    
-                    // 4. Create and play Audio
-                    const audioUrl = URL.createObjectURL(wavBlob);
-                    const audio = new Audio(audioUrl);
-                    
-                    button.innerHTML = '<i class="fas fa-volume-up"></i> جاري التشغيل...';
-                    
-                    audio.onended = () => {
-                        button.innerHTML = originalText;
-                        button.disabled = false;
-                        URL.revokeObjectURL(audioUrl); // Clean up the URL
-                    };
-                    audio.play().catch(e => {
-                        console.error("Audio playback error:", e);
-                        showNotification("فشل تشغيل الصوت.", 'error');
-                        button.innerHTML = originalText;
-                        button.disabled = false;
+            // تنفيذ سياسة Backoff عند فشل الاتصال
+            for (let i = 0; i < 5; i++) {
+                try {
+                    const response = await fetch(GEMINI_API_URL + apiKey, { // استخدام متغير apiKey
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
                     });
 
-                } else {
-                    throw new Error("Invalid audio data received from API.");
-                }
+                    if (!response.ok) {
+                        if (response.status !== 429 && response.status !== 500) {
+                             throw new Error(`HTTP error! Status: ${response.status}`);
+                        }
+                        if (i === 4) throw new Error("API failed after multiple retries.");
+                        await new Promise(resolve => setTimeout(resolve, Math.pow(2, i) * 1000));
+                        continue;
+                    }
+                    
+                    const result = await response.json();
+                    const text = result.candidates?.[0]?.content?.parts?.[0]?.text;
+                    
+                    if (!text) {
+                         throw new Error("Received empty response from API.");
+                    }
+                    
+                    return text;
 
-            } catch (error) {
-                console.error("TTS API Error:", error);
-                showNotification(`خطأ في توليد الصوت: ${error.message.substring(0, 80)}`, 'error');
-                button.innerHTML = originalText;
-            } finally {
-                if (!button.disabled || button.innerHTML.includes('جاري التشغيل')) {
-                   // Only re-enable if it's not currently playing
-                   button.disabled = false;
-                   button.innerHTML = originalText;
+                } catch (error) {
+                    if (i === 4) throw error;
+                    await new Promise(resolve => setTimeout(resolve, Math.pow(2, i) * 1000));
                 }
             }
+            throw new Error("Failed to generate content after all retries.");
         }
+
+
+        /**
+         * الدالة الرئيسية لإرسال الرسالة.
+         */
+        async function sendMessage() {
+            const userMessage = chatInput.value.trim();
+            if (!userMessage) return;
+
+            // إظهار رسالة المستخدم
+            addMessage('user', userMessage);
+            
+            // إضافة الرسالة إلى سجل المحادثة
+            chatHistory.push({ role: "user", parts: [{ text: userMessage }] });
+
+            // تصفير حقل الإدخال
+            chatInput.value = '';
+            errorMsg.classList.add('hidden');
+
+            // إظهار حالة التحميل
+            sendBtn.disabled = true;
+            buttonIcon.classList.add('hidden');
+            loadingIndicator.classList.remove('hidden');
+
+            try {
+                const aiResponseText = await fetchGeminiChatResponse();
+                
+                // إضافة رد الذكاء الاصطناعي إلى سجل المحادثة والواجهة
+                chatHistory.push({ role: "model", parts: [{ text: aiResponseText }] });
+                addMessage('model', aiResponseText);
+
+            } catch (error) {
+                console.error("Gemini API Error:", error);
+                // رسالة خطأ واضحة للمستخدم
+                if (error.message.includes("API Key is missing")) {
+                    errorMsg.textContent = "يرجى إدخال مفتاح API في قسم 'إدارة الأوامر المخصصة' للمتابعة.";
+                } else {
+                    errorMsg.textContent = `عفواً، فشل في الرد. (الخطأ: ${error.message})`;
+                }
+                errorMsg.classList.remove('hidden');
+                // في حالة الخطأ، من الأفضل إزالة آخر رسالة للمستخدم لتجنب السياق الخاطئ
+                chatHistory.pop(); 
+            } finally {
+                // إخفاء حالة التحميل وإعادة تفعيل الزر
+                sendBtn.disabled = false;
+                buttonIcon.classList.remove('hidden');
+                loadingIndicator.classList.add('hidden');
+                chatInput.focus();
+            }
+        }
+        
+        // --- تهيئة التطبيق ---
+        function initializeApp() {
+            loadCommands();
+            loadApiKey(); // تحميل مفتاح API عند بدء التشغيل
+            // تفعيل الأمر الافتراضي عند التحميل
+            setActiveInstruction(DEFAULT_INSTRUCTION, 'النظام الافتراضي (صيغة صارمة: يجب الإتقان 100%)');
+            // عرض وضع الدردشة افتراضياً
+            showView('chat');
+        }
+
+        initializeApp();
+
     </script>
 </body>
 </html>
-
